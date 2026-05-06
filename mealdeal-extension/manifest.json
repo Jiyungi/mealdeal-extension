@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "MealDeal",
+  "version": "0.1.0",
+  "description": "Compare the real visible cost of the same meal across Uber Eats, DoorDash, and Grubhub.",
+  "action": {
+    "default_title": "MealDeal",
+    "default_popup": "src/popup/index.html"
+  },
+  "background": {
+    "service_worker": "src/background/serviceWorker.ts",
+    "type": "module"
+  },
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://www.ubereats.com/*",
+    "https://www.doordash.com/*",
+    "https://www.grubhub.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.ubereats.com/*"],
+      "js": ["src/content/uberEatsContent.ts"]
+    },
+    {
+      "matches": ["https://www.doordash.com/*"],
+      "js": ["src/content/doorDashContent.ts"]
+    },
+    {
+      "matches": ["https://www.grubhub.com/*"],
+      "js": ["src/content/grubhubContent.ts"]
+    }
+  ]
+}

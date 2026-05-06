@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>MealDeal Preview</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #e6eef7;
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+      }
+      .frame {
+        width: 420px;
+        min-height: 560px;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(31, 80, 130, 0.15);
+        background: #f4f8fc;
+      }
+      .label {
+        color: #4a6a8a;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      .column {
+        display: flex;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="column">
+      <div class="label">1 · Cart detected</div>
+      <div class="frame" id="frame-detected"></div>
+    </div>
+    <div class="column">
+      <div class="label">2 · Running</div>
+      <div class="frame" id="frame-running"></div>
+    </div>
+    <div class="column">
+      <div class="label">3 · Result</div>
+      <div class="frame" id="frame-result"></div>
+    </div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

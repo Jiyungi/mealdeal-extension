@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.next/
+preview-dist/
+
+# Editor
+.vscode/
+.idea/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+*.tsbuildinfo
