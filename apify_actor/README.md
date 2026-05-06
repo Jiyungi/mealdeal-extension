@@ -1,6 +1,6 @@
 # MealDeal Actor
 
-Custom Apify Actor for the Person B MealDeal workstream. It opens food-delivery platforms with Crawlee and Playwright, tries to build the requested cart, extracts visible cart subtotals, and returns one normalized `MealDealResult`.
+Custom Apify Actor for the Person B MealDeal workstream. It opens food-delivery platforms with Crawlee and Playwright, tries to build the requested cart, extracts visible item subtotals, and returns one normalized `MealDealResult`.
 
 ## Validate The Scraper
 
@@ -23,7 +23,7 @@ npm run test:scraper
 
 ## Live-Site Smoke Test
 
-Live delivery sites may block headless browsers, require login, show CAPTCHA, or hide checkout totals. Those are expected live-site outcomes; the Actor stops at the cart and compares visible cart subtotals instead of trying to checkout or inventing prices.
+Live delivery sites may block headless browsers, require login, show CAPTCHA, or hide checkout totals. Those are expected live-site outcomes; the Actor compares visible item subtotals instead of trying to checkout or inventing prices.
 
 For normal Docker testing, keep `debug=false` to avoid large screenshot writes on Windows bind mounts.
 
@@ -42,6 +42,38 @@ apify push
 The Actor input supports Apify Proxy through `proxyConfiguration`. Leave `useApifyProxy` disabled for the first smoke test, then enable it in Apify Console if a platform blocks cloud traffic.
 
 DoorDash and Uber Eats may still require a real user-visible browser session for some cart data. The supported production path is for the extension/backend to pass `userVisibleSnapshots` captured from the user's already logged-in tab. When a snapshot is supplied for a selected platform, the Actor compares that quote and skips live scraping for that platform.
+
+## DoorDash Store Actors
+
+DoorDash has strong browser security. MealDeal now uses external Apify Store actors for DoorDash menu prices when possible, then normalizes the result into the same `PlatformQuote` shape.
+
+The tested working direct-store path is:
+
+```text
+crawlerbros/doordash-restaurant-scraper
+```
+
+Other actors are kept as fallbacks when the direct actor does not return usable menu data. `memo23/doordash-reviews-cheerio` currently requires renting the paid Store actor in Apify Console before this account can run it; the CLI cannot auto-rent it for you.
+
+For best DoorDash results, provide a DoorDash store URL:
+
+```json
+{
+  "address": "2550 Van Ness Avenue, San Francisco, CA",
+  "restaurantName": "Halal City",
+  "query": "Rice Platters",
+  "cartItems": [{ "name": "Rice Platters", "quantity": 2 }],
+  "platforms": ["doordash"],
+  "doorDashStoreUrls": [
+    "https://www.doordash.com/store/halal-city---soma-san-francisco-34620533"
+  ],
+  "doorDashUseExternalActors": true,
+  "maxCandidatesPerPlatform": 3,
+  "debug": false
+}
+```
+
+This returns a DoorDash `quoteLevel` of `menu`: it is a menu-derived item subtotal, not checkout fees, tax, or final total.
 
 ## DoorDash Verification
 

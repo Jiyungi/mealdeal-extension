@@ -13,6 +13,7 @@ export type MealDealRequest = {
   query: string;
   cartItems: CartItemRequest[];
   platforms: Platform[];
+  doorDashStoreUrls?: string[];
   userVisibleSnapshots?: PlatformQuote[];
 };
 
@@ -65,6 +66,7 @@ export type MealDealResult = {
 export type ActorInput = MealDealRequest & {
   maxCandidatesPerPlatform: number;
   debug: boolean;
+  doorDashUseExternalActors: boolean;
   platformStartUrls?: Partial<Record<Platform, string>>;
   proxyConfiguration?: ActorProxyConfigurationInput;
   platformProxyConfigurations?: Partial<Record<Platform, ActorProxyConfigurationInput>>;

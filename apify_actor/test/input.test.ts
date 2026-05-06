@@ -14,6 +14,7 @@ describe("input validation", () => {
     expect(input.platforms).toEqual(["ubereats", "doordash", "grubhub"]);
     expect(input.maxCandidatesPerPlatform).toBe(3);
     expect(input.debug).toBe(false);
+    expect(input.doorDashUseExternalActors).toBe(true);
   });
 
   it("rejects missing required fields", () => {
@@ -26,6 +27,8 @@ describe("input validation", () => {
       query: "Chicken Pad Thai",
       cartItems: [{ name: "Chicken Pad Thai", quantity: 1 }],
       platforms: ["doordash"],
+      doorDashStoreUrls: ["https://www.doordash.com/store/thai-time-123"],
+      doorDashUseExternalActors: false,
       proxyConfiguration: {
         useApifyProxy: true,
         apifyProxyGroups: ["RESIDENTIAL"],
@@ -44,6 +47,8 @@ describe("input validation", () => {
       platformBrowserUserDataDirs: { doordash: "/tmp/mealdeal-doordash-browser" }
     });
 
+    expect(input.doorDashStoreUrls).toEqual(["https://www.doordash.com/store/thai-time-123"]);
+    expect(input.doorDashUseExternalActors).toBe(false);
     expect(input.proxyConfiguration?.apifyProxyGroups).toEqual(["RESIDENTIAL"]);
     expect(input.platformProxyConfigurations?.doordash?.groups).toEqual(["RESIDENTIAL"]);
     expect(input.proxyUrl).toBe("http://user:pass@example.com:8000");

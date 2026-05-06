@@ -20,6 +20,12 @@ export function validateInput(raw: unknown): ActorInput {
   const restaurantName = optionalNonEmptyString(record.restaurantName);
   const cartItems = parseCartItems(record.cartItems);
   const platforms = parsePlatforms(record.platforms);
+  const doorDashStoreUrls = optionalStringArray(record.doorDashStoreUrls, "doorDashStoreUrls");
+  const doorDashUseExternalActors = parseBoolean(
+    record.doorDashUseExternalActors,
+    true,
+    "doorDashUseExternalActors"
+  );
   const userVisibleSnapshots = parseUserVisibleSnapshots(record.userVisibleSnapshots, cartItems);
   const platformStartUrls = parsePlatformStartUrls(record.platformStartUrls);
   const proxyConfiguration = parseProxyConfiguration(record.proxyConfiguration, "proxyConfiguration");
@@ -46,6 +52,8 @@ export function validateInput(raw: unknown): ActorInput {
     query,
     cartItems,
     platforms,
+    doorDashStoreUrls,
+    doorDashUseExternalActors,
     userVisibleSnapshots,
     platformStartUrls,
     proxyConfiguration,
@@ -55,7 +63,7 @@ export function validateInput(raw: unknown): ActorInput {
     browserUserDataDir,
     platformBrowserUserDataDirs,
     maxCandidatesPerPlatform,
-    debug: Boolean(record.debug)
+    debug: parseBoolean(record.debug, false, "debug")
   };
 }
 
@@ -112,7 +120,9 @@ export function toMealDealRequest(input: ActorInput) {
     restaurantName: input.restaurantName,
     query: input.query,
     cartItems: input.cartItems,
-    platforms: input.platforms
+    platforms: input.platforms,
+    doorDashStoreUrls: input.doorDashStoreUrls,
+    userVisibleSnapshots: input.userVisibleSnapshots
   };
 }
 
@@ -394,6 +404,16 @@ function parsePositiveInteger(value: unknown, fallback: number, field: string): 
   }
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
     throw new Error(`${field} must be a positive integer.`);
+  }
+  return value;
+}
+
+function parseBoolean(value: unknown, fallback: boolean, field: string): boolean {
+  if (value == null || value === "") {
+    return fallback;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error(`${field} must be a boolean.`);
   }
   return value;
 }

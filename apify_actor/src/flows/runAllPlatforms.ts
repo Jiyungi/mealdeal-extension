@@ -3,6 +3,7 @@ import { GrubhubAdapter } from "../platforms/grubhub.js";
 import { UberEatsAdapter } from "../platforms/uberEats.js";
 import type { ActorInput, Platform, PlatformQuote } from "../types.js";
 import type { PlatformAdapter } from "../platforms/basePlatform.js";
+import { resolveDoorDashStoreUrls, runDoorDashExternalQuoteFlow } from "../platforms/doorDashExternal.js";
 import { runPlatformQuoteFlow } from "./runPlatformQuoteFlow.js";
 
 export async function runAllPlatforms(input: ActorInput): Promise<PlatformQuote[]> {
@@ -14,6 +15,14 @@ export async function runAllPlatforms(input: ActorInput): Promise<PlatformQuote[
     if (snapshot) {
       quotes.push(withSnapshotWarning(snapshot));
       continue;
+    }
+
+    if (platform === "doordash") {
+      const externalQuote = await runDoorDashExternalQuoteFlow(input);
+      if (externalQuote && (externalQuote.itemSubtotal != null || resolveDoorDashStoreUrls(input).length > 0)) {
+        quotes.push(externalQuote);
+        continue;
+      }
     }
 
     const adapter = createAdapter(platform);

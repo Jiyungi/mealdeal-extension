@@ -10,14 +10,14 @@ export function buildReason(comparison: QuoteComparison): string {
   const label = platformLabel(comparison.bestQuote.platform);
   const value = formatMoney(quoteValue(comparison.bestQuote, comparison.comparisonBasis));
   const metric =
-    comparison.comparisonBasis === "finalTotal" ? "visible final total" : "visible cart subtotal";
+    comparison.comparisonBasis === "finalTotal" ? "visible final total" : "item subtotal";
   if (comparison.savingsVsSecondBest != null) {
     return `${label} has the lowest ${metric} at ${value}, saving ${formatMoney(
       comparison.savingsVsSecondBest
     )} versus the next cheapest platform.`;
   }
 
-  return `${label} is the only platform with a ${metric} at ${value}.`;
+  return `${label} is the only platform with ${metric} of ${value}.`;
 }
 
 function formatMoney(value: number | null): string {

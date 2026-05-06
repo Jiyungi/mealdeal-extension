@@ -12,7 +12,7 @@
       "bestPlatform": {
         "type": ["string", "null"],
         "title": "Best platform",
-        "description": "Platform with the lowest visible cart subtotal, or null if no platform returned a comparable subtotal.",
+        "description": "Platform with the lowest comparable item subtotal, or null if no platform returned a comparable subtotal.",
         "enum": ["ubereats", "doordash", "grubhub", null]
       },
       "bestQuote": {
@@ -31,12 +31,12 @@
       "savingsVsMostExpensive": {
         "type": ["number", "null"],
         "title": "Savings vs most expensive",
-        "description": "Dollar savings of the best quote compared with the most expensive comparable quote."
+        "description": "Dollar savings of the best item subtotal compared with the most expensive comparable quote."
       },
       "savingsVsSecondBest": {
         "type": ["number", "null"],
         "title": "Savings vs second best",
-        "description": "Dollar savings of the best quote compared with the second best comparable quote."
+        "description": "Dollar savings of the best item subtotal compared with the second best comparable quote."
       },
       "reason": {
         "type": "string",
@@ -108,7 +108,7 @@
             "format": "text"
           },
           "bestQuote.itemSubtotal": {
-            "label": "Best cart subtotal",
+            "label": "Best item subtotal",
             "format": "number"
           },
           "bestQuote.restaurantName": {

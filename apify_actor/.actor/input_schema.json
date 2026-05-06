@@ -56,6 +56,22 @@
       },
       "default": ["ubereats", "doordash", "grubhub"]
     },
+    "doorDashStoreUrls": {
+      "title": "DoorDash store URLs",
+      "type": "array",
+      "description": "Optional DoorDash store URLs. When supplied, MealDeal calls tested Apify Store actors to extract DoorDash menu prices instead of relying only on the blocked DoorDash browser flow.",
+      "editor": "json",
+      "items": {
+        "type": "string"
+      }
+    },
+    "doorDashUseExternalActors": {
+      "title": "Use DoorDash Apify Store actors",
+      "type": "boolean",
+      "description": "Use external Apify Store actors for DoorDash menu data when possible. Disable only when testing the custom Playwright DoorDash flow.",
+      "default": true,
+      "editor": "checkbox"
+    },
     "userVisibleSnapshots": {
       "title": "User-visible quote snapshots",
       "type": "array",
