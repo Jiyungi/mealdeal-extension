@@ -4,13 +4,12 @@ import { quoteValue } from "./compareQuotes.js";
 
 export function buildReason(comparison: QuoteComparison): string {
   if (!comparison.bestQuote) {
-    return "MealDeal could not choose a platform because no successful platform exposed a visible cart subtotal.";
+    return "MealDeal could not choose a platform because no successful platform exposed an item subtotal.";
   }
 
   const label = platformLabel(comparison.bestQuote.platform);
   const value = formatMoney(quoteValue(comparison.bestQuote, comparison.comparisonBasis));
-  const metric =
-    comparison.comparisonBasis === "finalTotal" ? "visible final total" : "item subtotal";
+  const metric = "item subtotal";
   if (comparison.savingsVsSecondBest != null) {
     return `${label} has the lowest ${metric} at ${value}, saving ${formatMoney(
       comparison.savingsVsSecondBest

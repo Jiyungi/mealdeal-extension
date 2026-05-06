@@ -19,7 +19,7 @@ Run the deterministic scraper test:
 npm run test:scraper
 ```
 
-`test:scraper` points the real Actor platform flows at fixture pages in `fixtures/`. This proves the scraper can extract restaurant names, matching menu items, subtotal, delivery fee, service fee, small order fee, tax, discount, promo text, ETA, choose the cheapest platform by visible cart subtotal, and return normalized quotes.
+`test:scraper` points the real Actor platform flows at fixture pages in `fixtures/`. This proves the scraper can extract restaurant names, matching menu items, subtotal, delivery fee, service fee, small order fee, tax, discount, promo text, ETA, choose the cheapest platform by item subtotal, and return normalized quotes.
 
 ## Live-Site Smoke Test
 

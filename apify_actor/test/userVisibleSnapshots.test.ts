@@ -20,8 +20,8 @@ describe("user-visible quote snapshots", () => {
           restaurantName: "Thai Time",
           matchedItemName: "Chicken Pad Thai",
           requestedItemName: "Chicken Pad Thai",
-          finalTotal: 21.42,
-          quoteLevel: "checkout",
+          itemSubtotal: 16.99,
+          quoteLevel: "cart",
           confidence: "high",
           warnings: []
         }
@@ -33,11 +33,45 @@ describe("user-visible quote snapshots", () => {
     expect(quotes[0]).toMatchObject({
       platform: "doordash",
       status: "success",
-      finalTotal: 21.42
+      itemSubtotal: 16.99
     });
     expect(quotes[0].warnings).toContain(
       "DoorDash user-visible snapshot supplied; live scraping skipped for this platform."
     );
     expect(compareQuotes(quotes).bestPlatform).toBe("doordash");
+  });
+
+  it("keeps a final-total-only snapshot as evidence but does not compare on it", async () => {
+    const input = validateInput({
+      address: "525 Market St, San Francisco, CA",
+      query: "Chicken Pad Thai",
+      cartItems: [{ name: "Chicken Pad Thai", quantity: 1 }],
+      platforms: ["doordash"],
+      platformStartUrls: {
+        doordash: "https://invalid.localhost.example/"
+      },
+      userVisibleSnapshots: [
+        {
+          platform: "doordash",
+          status: "success",
+          restaurantName: "Thai Time",
+          matchedItemName: "Chicken Pad Thai",
+          requestedItemName: "Chicken Pad Thai",
+          finalTotal: 21.42,
+          quoteLevel: "checkout",
+          confidence: "high",
+          warnings: []
+        }
+      ]
+    });
+
+    const quotes = await runAllPlatforms(input);
+    expect(quotes[0]).toMatchObject({
+      platform: "doordash",
+      status: "success",
+      finalTotal: 21.42,
+      itemSubtotal: null
+    });
+    expect(compareQuotes(quotes).bestPlatform).toBeNull();
   });
 });

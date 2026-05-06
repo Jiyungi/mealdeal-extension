@@ -3,7 +3,7 @@ import type { Platform, PlatformQuote } from "../types.js";
 export type QuoteComparison = {
   bestPlatform: Platform | null;
   bestQuote: PlatformQuote | null;
-  comparisonBasis: "itemSubtotal" | "finalTotal" | null;
+  comparisonBasis: "itemSubtotal" | null;
   savingsVsMostExpensive: number | null;
   savingsVsSecondBest: number | null;
   comparableQuotes: PlatformQuote[];
@@ -11,9 +11,8 @@ export type QuoteComparison = {
 
 export function compareQuotes(quotes: PlatformQuote[]): QuoteComparison {
   const bySubtotal = comparableQuotesBy(quotes, "itemSubtotal");
-  const byFinalTotal = comparableQuotesBy(quotes, "finalTotal");
-  const comparisonBasis = bySubtotal.length > 0 ? "itemSubtotal" : byFinalTotal.length > 0 ? "finalTotal" : null;
-  const comparableQuotes = comparisonBasis === "itemSubtotal" ? bySubtotal : byFinalTotal;
+  const comparisonBasis = bySubtotal.length > 0 ? "itemSubtotal" : null;
+  const comparableQuotes = bySubtotal;
 
   if (comparableQuotes.length === 0) {
     return {
@@ -49,7 +48,7 @@ export function compareQuotes(quotes: PlatformQuote[]): QuoteComparison {
 
 function comparableQuotesBy(
   quotes: PlatformQuote[],
-  key: "itemSubtotal" | "finalTotal"
+  key: "itemSubtotal"
 ): PlatformQuote[] {
   return quotes
     .filter((quote) => quote.status !== "failed" && typeof quote[key] === "number")

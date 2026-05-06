@@ -21,15 +21,15 @@ describe("quote comparison", () => {
     expect(buildReason(comparison)).toContain("DoorDash");
   });
 
-  it("falls back to final total if cart subtotals are not visible", () => {
+  it("does not choose a platform from final totals alone", () => {
     const comparison = compareQuotes([
       { ...quote("ubereats", null, 19.9), itemSubtotal: null },
       { ...quote("doordash", null, 24.18), itemSubtotal: null }
     ]);
 
-    expect(comparison.bestPlatform).toBe("ubereats");
-    expect(comparison.comparisonBasis).toBe("finalTotal");
-    expect(buildReason(comparison)).toContain("final total");
+    expect(comparison.bestPlatform).toBeNull();
+    expect(comparison.comparisonBasis).toBeNull();
+    expect(buildReason(comparison)).toContain("could not choose");
   });
 
   it("does not choose a failed or subtotal-less platform", () => {

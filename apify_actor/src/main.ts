@@ -23,7 +23,7 @@ try {
   const warnings = Array.from(
     new Set([
       ...quotes.flatMap((quote) => quote.warnings),
-      ...(comparison.bestQuote ? [] : ["No platform returned a comparable visible cart subtotal."])
+      ...(comparison.bestQuote ? [] : ["No platform returned a comparable item subtotal."])
     ])
   );
 

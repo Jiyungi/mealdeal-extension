@@ -47,10 +47,9 @@ function selectSnapshotsByPlatform(
 
 function rankSnapshot(snapshot: PlatformQuote): number {
   const statusRank = snapshot.status === "success" ? 100 : snapshot.status === "partial" ? 50 : 0;
-  const totalRank = snapshot.finalTotal == null ? 0 : 1000;
-  const subtotalRank = snapshot.itemSubtotal == null ? 0 : 900;
+  const subtotalRank = snapshot.itemSubtotal == null ? 0 : 1000;
   const confidenceRank = snapshot.confidence === "high" ? 10 : snapshot.confidence === "medium" ? 5 : 1;
-  return totalRank + subtotalRank + statusRank + confidenceRank;
+  return subtotalRank + statusRank + confidenceRank;
 }
 
 function withSnapshotWarning(snapshot: PlatformQuote): PlatformQuote {
