@@ -10,7 +10,7 @@ across Uber Eats, DoorDash, and Grubhub.
 - `src/background/serviceWorker.ts` — MV3 service worker message router.
 - `src/content/*` — per-platform content scripts that scrape the user's
   currently visible page and send snapshots to the service worker.
-- `src/lib` — shared types (mirror of `mealdeal-actor/src/types.ts`),
+- `src/lib` — shared types (mirror of `apify_actor/src/types.ts`),
   `apiClient`, `storage`, `formatMoney`, `platformLinks`.
 
 ## Env
@@ -29,3 +29,11 @@ npm install
 npm run dev          # Vite dev build with HMR
 npm run build        # emits dist/ — load unpacked in chrome://extensions
 ```
+
+## Address handling
+
+The content scripts try to read the user's delivery address from the
+platform's DOM, but Uber Eats (and sometimes the others) hide it behind a
+picker that's not rendered until clicked. When extraction fails, the popup
+falls back to the user's saved **home address** — entered once in the
+DetectedCart / SearchForm UI and persisted in `chrome.storage.local`.

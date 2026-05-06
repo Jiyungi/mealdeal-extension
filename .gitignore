@@ -2,10 +2,14 @@ node_modules/
 dist/
 .next/
 preview-dist/
+chrome-screenshots/
+.chrome-profile/
+.chrome-profile-live/
 
 # Editor
 .vscode/
 .idea/
+.DS_Store
 
 # Env
 .env

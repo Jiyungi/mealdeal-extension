@@ -3,10 +3,13 @@ import {
   buildPageContext,
   buildSnapshot,
   collectCartRows,
+  extractFinalMoney,
   extractVisibleMoney,
   findByLabel,
   firstMatch,
+  observePageChanges,
   onReady,
+  sendContextToBackground,
   sendSnapshotToBackground,
   textOf,
 } from "./genericFoodPageContent";
@@ -55,7 +58,7 @@ function scrape(): PageContext {
     deliveryFee: extractVisibleMoney(deliveryText),
     serviceFee: extractVisibleMoney(serviceText),
     tax: extractVisibleMoney(taxText),
-    finalTotal: extractVisibleMoney(finalText),
+    finalTotal: extractFinalMoney(finalText),
     promoText,
     rawEvidence: {
       subtotalText,
@@ -92,8 +95,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
 onReady(() => {
   try {
-    sendSnapshotToBackground(scrape().snapshot);
+    const context = scrape();
+    sendContextToBackground(context);
+    sendSnapshotToBackground(context.snapshot);
   } catch {
-    /* best-effort background snapshot */
+    /* best-effort initial snapshot */
   }
+  observePageChanges(scrape);
 });

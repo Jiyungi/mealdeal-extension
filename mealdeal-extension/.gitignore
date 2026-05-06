@@ -1,4 +1,7 @@
 node_modules
 dist
+preview-dist
+chrome-screenshots
+.chrome-profile
 .env
 .env.local

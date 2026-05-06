@@ -1,7 +1,12 @@
-import { useState } from "react";
-import type { CartItemRequest, MealDealRequest, Platform } from "../../lib/types";
+import { useEffect, useState } from "react";
+import type {
+  CartItemRequest,
+  MealDealRequest,
+  Platform,
+} from "../../lib/types";
 import { PLATFORMS } from "../../lib/types";
 import { platformLabel } from "../../lib/platformLinks";
+import { loadHomeAddress, saveHomeAddress } from "../../lib/storage";
 
 type Props = {
   initialValues?: Partial<MealDealRequest>;
@@ -43,7 +48,20 @@ export default function SearchForm({
       ? initialValues.platforms
       : [...PLATFORMS],
   );
+  const [saveAsHome, setSaveAsHome] = useState(true);
+  const [homeAddress, setHomeAddress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // On mount, seed the address field with the user's saved home address if
+  // the caller didn't pass one in.
+  useEffect(() => {
+    (async () => {
+      const home = await loadHomeAddress();
+      setHomeAddress(home);
+      if (!address && home) setAddress(home);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function togglePlatform(p: Platform) {
     setPlatforms((prev) =>
@@ -65,7 +83,11 @@ export default function SearchForm({
     setItems((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleUseHome() {
+    if (homeAddress) setAddress(homeAddress);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const cartItems = toCartItems(items);
     if (!address.trim()) {
@@ -85,6 +107,12 @@ export default function SearchForm({
       return;
     }
     setError(null);
+
+    if (saveAsHome && address.trim() !== (homeAddress ?? "")) {
+      await saveHomeAddress(address.trim());
+      setHomeAddress(address.trim());
+    }
+
     onSubmit({
       address: address.trim(),
       restaurantName: restaurantName.trim() || undefined,
@@ -94,17 +122,41 @@ export default function SearchForm({
     });
   }
 
+  const addressIsHome = !!homeAddress && address.trim() === homeAddress.trim();
+
   return (
     <form className="search-form" onSubmit={handleSubmit}>
       <label className="field">
         <span>Delivery address</span>
-        <input
-          type="text"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="525 Market St, San Francisco, CA"
-          autoFocus
-        />
+        <div className="address-input">
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="525 Market St, San Francisco, CA"
+            autoFocus
+          />
+          {homeAddress && !addressIsHome ? (
+            <div className="address-actions">
+              <button
+                type="button"
+                className="btn btn--link"
+                onClick={handleUseHome}
+                title={homeAddress}
+              >
+                🏠 Use home address
+              </button>
+            </div>
+          ) : null}
+          <label className="address-save">
+            <input
+              type="checkbox"
+              checked={saveAsHome}
+              onChange={(e) => setSaveAsHome(e.target.checked)}
+            />
+            <span>Save as my home address</span>
+          </label>
+        </div>
       </label>
 
       <label className="field">

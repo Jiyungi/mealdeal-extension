@@ -1,6 +1,7 @@
 import type { Platform, PlatformQuote } from "../../lib/types";
 import { formatUSD } from "../../lib/formatMoney";
 import { platformLabel, platformOpenUrl } from "../../lib/platformLinks";
+import { truncateForDisplay } from "../../lib/cleanText";
 
 type Props = {
   quotes: PlatformQuote[];
@@ -20,13 +21,10 @@ export default function QuoteTable({ quotes, bestPlatform }: Props) {
         <span />
       </div>
       {quotes.map((q) => {
-        const fees =
-          (q.deliveryFee ?? 0) +
-          (q.serviceFee ?? 0) +
-          (q.smallOrderFee ?? 0) +
-          (q.tax ?? 0) -
-          (q.discount ?? 0);
+        const fees = sumFees(q);
         const isBest = q.platform === bestPlatform;
+        const restaurant = truncateForDisplay(q.restaurantName, 40);
+        const promo = truncateForDisplay(q.promoText, 60);
         return (
           <div
             key={q.platform}
@@ -36,15 +34,20 @@ export default function QuoteTable({ quotes, bestPlatform }: Props) {
           >
             <span>
               <strong>{platformLabel(q.platform)}</strong>
-              {q.restaurantName ? (
-                <small className="muted"> · {q.restaurantName}</small>
+              {restaurant ? (
+                <small className="muted" title={q.restaurantName ?? ""}>
+                  {" "}
+                  · {restaurant}
+                </small>
               ) : null}
-              {q.promoText ? (
-                <div className="badge">{q.promoText}</div>
+              {promo ? (
+                <div className="badge" title={q.promoText ?? ""}>
+                  {promo}
+                </div>
               ) : null}
             </span>
             <span>{formatUSD(q.itemSubtotal)}</span>
-            <span>{formatUSD(fees || null)}</span>
+            <span>{formatUSD(fees)}</span>
             <span className="quote-table__total">
               {formatUSD(q.finalTotal)}
             </span>
@@ -59,12 +62,26 @@ export default function QuoteTable({ quotes, bestPlatform }: Props) {
                 Open
               </a>
             </span>
-            {q.status === "failed" && q.warnings.length > 0 ? (
-              <div className="quote-table__warning">{q.warnings[0]}</div>
+            {q.status !== "success" && q.warnings.length > 0 ? (
+              <div className="quote-table__warning" title={q.warnings.join("\n")}>
+                {truncateForDisplay(q.warnings[0], 120)}
+              </div>
             ) : null}
           </div>
         );
       })}
     </div>
   );
+}
+
+function sumFees(q: PlatformQuote): number | null {
+  const parts = [q.deliveryFee, q.serviceFee, q.smallOrderFee, q.tax];
+  if (parts.every((v) => v == null) && q.discount == null) return null;
+  const total =
+    (q.deliveryFee ?? 0) +
+    (q.serviceFee ?? 0) +
+    (q.smallOrderFee ?? 0) +
+    (q.tax ?? 0) -
+    (q.discount ?? 0);
+  return total;
 }

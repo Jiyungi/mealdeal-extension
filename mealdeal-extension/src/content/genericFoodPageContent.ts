@@ -4,6 +4,7 @@ import type {
   Platform,
   PlatformQuote,
 } from "../lib/types";
+import { cleanAddress, cleanItemName } from "../lib/cleanText";
 
 export function detectPlatform(): Platform | null {
   const host = location.hostname;
@@ -14,6 +15,7 @@ export function detectPlatform(): Platform | null {
 }
 
 const MONEY_RE = /-?\$\s?\d+(?:\.\d{1,2})?/;
+const MONEY_RE_G = /-?\$\s?\d+(?:\.\d{1,2})?/g;
 
 export function extractVisibleMoney(
   text: string | null | undefined,
@@ -22,6 +24,23 @@ export function extractVisibleMoney(
   const match = text.match(MONEY_RE);
   if (!match) return null;
   const n = Number(match[0].replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Pick the last visible money amount in a label block. Real platform
+ * totals with a promo render as "Total $45.00 $38.00" (original +
+ * discounted, sometimes with a strikethrough). The final, user-facing
+ * total is the last amount, not the first.
+ */
+export function extractFinalMoney(
+  text: string | null | undefined,
+): number | null {
+  if (!text) return null;
+  const matches = text.match(MONEY_RE_G);
+  if (!matches || matches.length === 0) return null;
+  const last = matches[matches.length - 1];
+  const n = Number(last.replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : null;
 }
 
@@ -112,6 +131,60 @@ export function sendSnapshotToBackground(snapshot: PlatformQuote): void {
   }
 }
 
+export function sendContextToBackground(context: PageContext): void {
+  try {
+    chrome.runtime.sendMessage({ type: "SAVE_CONTEXT", context });
+  } catch {
+    /* extension context may be invalidated during reload */
+  }
+}
+
+/**
+ * Keep sending fresh page snapshots as the user modifies their cart. Uber
+ * Eats, DoorDash, and Grubhub render their cart as an in-page drawer and
+ * update the DOM in place when items change, so a MutationObserver on
+ * <body> catches those updates.
+ */
+export function observePageChanges(
+  scrape: () => PageContext,
+  debounceMs = 500,
+): void {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const emit = () => {
+    try {
+      const context = scrape();
+      sendContextToBackground(context);
+      sendSnapshotToBackground(context.snapshot);
+    } catch {
+      /* ignore transient DOM errors */
+    }
+  };
+
+  const schedule = () => {
+    if (timer !== null) clearTimeout(timer);
+    timer = setTimeout(emit, debounceMs);
+  };
+
+  const observer = new MutationObserver(schedule);
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+  // Also emit once on SPA navigations (history changes).
+  window.addEventListener("popstate", schedule);
+  const origPushState = history.pushState.bind(history);
+  const origReplaceState = history.replaceState.bind(history);
+  history.pushState = (...args: Parameters<typeof history.pushState>) => {
+    origPushState(...args);
+    schedule();
+  };
+  history.replaceState = (...args: Parameters<typeof history.replaceState>) => {
+    origReplaceState(...args);
+    schedule();
+  };
+}
+
 export function onReady(fn: () => void): void {
   if (
     document.readyState === "complete" ||
@@ -145,9 +218,11 @@ export function collectCartRows(rowSelectors: string[]): RawCartRow[] {
   const rows: RawCartRow[] = [];
   const elements = allMatches(rowSelectors);
   for (const el of elements) {
-    const name =
-      textOf(el.querySelector<HTMLElement>("h3, h4, h5, h6, strong, b, a")) ??
-      textOf(el);
+    const titleEl = el.querySelector<HTMLElement>(
+      "h3, h4, h5, h6, strong, b, a",
+    );
+    const rawName = textOf(titleEl) ?? textOf(el);
+    const name = cleanItemName(rawName);
     const priceEl = Array.from(el.querySelectorAll<HTMLElement>("*")).find(
       (n) => MONEY_RE.test(n.textContent ?? ""),
     );
@@ -194,7 +269,7 @@ export function buildPageContext(
   return {
     platform,
     url: location.href,
-    address: parts.address,
+    address: cleanAddress(parts.address),
     restaurantName: parts.restaurantName,
     restaurantUrl: parts.restaurantUrl,
     cartItems: toCartItems(parts.cartRows),

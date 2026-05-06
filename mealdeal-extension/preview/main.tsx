@@ -28,7 +28,7 @@ function Header() {
 const detectedContext: PageContext = {
   platform: "ubereats",
   url: "https://www.ubereats.com/store/thai-time",
-  address: "525 Market St, San Francisco, CA",
+  address: "525 Market St, Suite 1400, San Francisco, CA 94105",
   restaurantName: "Thai Time",
   restaurantUrl: "https://www.ubereats.com/store/thai-time",
   cartItems: [
@@ -60,12 +60,31 @@ const detectedContext: PageContext = {
   },
 };
 
+const detectedContextNoAddress: PageContext = {
+  ...detectedContext,
+  address: null,
+};
+
 function Detected() {
   return (
     <div className="app">
       <Header />
       <DetectedCart
         context={detectedContext}
+        submitting={false}
+        onCompare={() => {}}
+        onEditManually={() => {}}
+      />
+    </div>
+  );
+}
+
+function DetectedNoAddress() {
+  return (
+    <div className="app">
+      <Header />
+      <DetectedCart
+        context={detectedContextNoAddress}
         submitting={false}
         onCompare={() => {}}
         onEditManually={() => {}}
@@ -170,8 +189,7 @@ const mockResult: MealDealResult = {
   ],
   savingsVsMostExpensive: 7.34,
   savingsVsSecondBest: 3.5,
-  reason:
-    "DoorDash beats Uber Eats with free delivery on your current cart.",
+  reason: "DoorDash beats Uber Eats with free delivery on your current cart.",
   warnings: [],
   createdAt: new Date().toISOString(),
 };
@@ -199,5 +217,6 @@ function mount(id: string, node: React.ReactNode) {
 }
 
 mount("frame-detected", <Detected />);
+mount("frame-detected-no-address", <DetectedNoAddress />);
 mount("frame-running", <Running />);
 mount("frame-result", <Result />);

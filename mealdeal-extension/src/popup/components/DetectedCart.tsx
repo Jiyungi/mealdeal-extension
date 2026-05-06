@@ -1,57 +1,203 @@
+import { useEffect, useState } from "react";
 import type { PageContext, Platform } from "../../lib/types";
 import { platformLabel } from "../../lib/platformLinks";
 import { formatUSD } from "../../lib/formatMoney";
+import { loadHomeAddress, saveHomeAddress } from "../../lib/storage";
 
 type Props = {
   context: PageContext;
+  source?: "live" | "cache";
+  updatedAt?: number;
   submitting: boolean;
-  onCompare: (platforms: Platform[]) => void;
+  onCompare: (platforms: Platform[], overrideAddress?: string) => void;
   onEditManually: () => void;
 };
 
 const ALL_PLATFORMS: Platform[] = ["ubereats", "doordash", "grubhub"];
 
+function formatRelative(updatedAt: number | undefined): string {
+  if (!updatedAt) return "";
+  const seconds = Math.max(0, Math.round((Date.now() - updatedAt) / 1000));
+  if (seconds < 60) return "just now";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hr ago`;
+  const days = Math.round(hours / 24);
+  return `${days} d ago`;
+}
+
 export default function DetectedCart({
   context,
+  source = "live",
+  updatedAt,
   submitting,
   onCompare,
   onEditManually,
 }: Props) {
   const otherPlatforms = ALL_PLATFORMS.filter((p) => p !== context.platform);
-  const canCompare = context.cartItems.length > 0 && !!context.address;
+  const hasItems = context.cartItems.length > 0;
+
+  const [addressOverride, setAddressOverride] = useState<string | null>(null);
+  const [homeAddress, setHomeAddress] = useState<string | null>(null);
+  const [editingAddress, setEditingAddress] = useState(false);
+  const [addressDraft, setAddressDraft] = useState("");
+
+  useEffect(() => {
+    loadHomeAddress().then((home) => {
+      setHomeAddress(home);
+      // If the page didn't expose an address, auto-use the saved home.
+      if (home && !context.address && !addressOverride) {
+        setAddressOverride(home);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context.address]);
+
+  const effectiveAddress = addressOverride ?? context.address ?? null;
+  const hasAddress = !!effectiveAddress;
+  const canCompare = hasItems && hasAddress && !submitting;
+
+  const compareLabel = submitting
+    ? "Comparing…"
+    : `Compare with ${otherPlatforms.map((p) => platformLabel(p)).join(" & ")}`;
+
+  async function handleSaveAddress() {
+    const value = addressDraft.trim();
+    if (!value) return;
+    setAddressOverride(value);
+    await saveHomeAddress(value);
+    setHomeAddress(value);
+    setEditingAddress(false);
+  }
+
+  function startEditing() {
+    setAddressDraft(effectiveAddress ?? "");
+    setEditingAddress(true);
+  }
+
+  function handleCompare() {
+    onCompare(otherPlatforms, effectiveAddress ?? undefined);
+  }
 
   return (
     <section className="detected-cart">
       <div className="detected-cart__eyebrow">
-        Detected on {platformLabel(context.platform)}
+        {source === "cache" ? (
+          <>
+            Last seen on {platformLabel(context.platform)}
+            <span className="detected-cart__stale">
+              {" "}
+              · {formatRelative(updatedAt)}
+            </span>
+          </>
+        ) : (
+          <>Detected on {platformLabel(context.platform)}</>
+        )}
       </div>
 
       <div className="detected-cart__restaurant">
         {context.restaurantName ?? "Unknown restaurant"}
       </div>
 
-      {context.address ? (
-        <div className="detected-cart__address" title={context.address}>
-          📍 {context.address}
+      {editingAddress ? (
+        <div className="detected-cart__address-edit">
+          <input
+            type="text"
+            value={addressDraft}
+            onChange={(e) => setAddressDraft(e.target.value)}
+            placeholder="525 Market St, San Francisco, CA"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSaveAddress();
+              }
+              if (e.key === "Escape") setEditingAddress(false);
+            }}
+          />
+          <div className="detected-cart__address-edit-actions">
+            <button
+              type="button"
+              className="btn btn--secondary"
+              onClick={handleSaveAddress}
+              disabled={!addressDraft.trim()}
+            >
+              Save as home
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost"
+              onClick={() => setEditingAddress(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : hasAddress ? (
+        <div
+          className="detected-cart__address"
+          title={effectiveAddress ?? ""}
+        >
+          <span className="detected-cart__address-icon" aria-hidden="true">
+            📍
+          </span>
+          <span className="detected-cart__address-text">
+            {effectiveAddress}
+          </span>
+          <button
+            type="button"
+            className="btn btn--link detected-cart__address-edit-btn"
+            onClick={startEditing}
+          >
+            Edit
+          </button>
         </div>
       ) : (
         <div className="detected-cart__address detected-cart__address--missing">
-          📍 No delivery address detected
+          <span className="detected-cart__address-icon" aria-hidden="true">
+            📍
+          </span>
+          <span className="detected-cart__address-text">
+            No delivery address found. Enter it once to save it for later.
+          </span>
         </div>
       )}
 
+      {!editingAddress ? (
+        <div className="detected-cart__address-actions">
+          <button
+            type="button"
+            className="btn btn--link"
+            onClick={startEditing}
+          >
+            ✏️ {hasAddress ? "Change address" : "Enter address"}
+          </button>
+          {homeAddress && effectiveAddress !== homeAddress ? (
+            <button
+              type="button"
+              className="btn btn--link"
+              onClick={() => setAddressOverride(homeAddress)}
+              title={homeAddress}
+            >
+              🏠 Use home address
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <ul className="detected-cart__items">
-        {context.cartItems.length === 0 ? (
-          <li className="detected-cart__empty">
-            No cart items detected on this page.
-          </li>
-        ) : (
+        {hasItems ? (
           context.cartItems.map((item, i) => (
             <li key={`${item.name}-${i}`} className="detected-cart__item">
               <span className="detected-cart__qty">{item.quantity}×</span>
               <span className="detected-cart__name">{item.name}</span>
             </li>
           ))
+        ) : (
+          <li className="detected-cart__empty">
+            No cart items detected on this page.
+          </li>
         )}
       </ul>
 
@@ -65,14 +211,17 @@ export default function DetectedCart({
       <div className="detected-cart__actions">
         <button
           className="btn btn--primary"
-          disabled={!canCompare || submitting}
-          onClick={() => onCompare(otherPlatforms)}
+          disabled={!canCompare}
+          onClick={handleCompare}
+          title={
+            !hasItems
+              ? "No cart items detected yet."
+              : !hasAddress
+                ? "Add an address above to enable Compare."
+                : undefined
+          }
         >
-          {submitting
-            ? "Comparing…"
-            : `Compare with ${otherPlatforms
-                .map((p) => platformLabel(p))
-                .join(" & ")}`}
+          {compareLabel}
         </button>
         <button
           type="button"
@@ -80,7 +229,7 @@ export default function DetectedCart({
           onClick={onEditManually}
           disabled={submitting}
         >
-          Edit manually
+          Edit full search
         </button>
       </div>
     </section>

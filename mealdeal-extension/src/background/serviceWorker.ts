@@ -1,5 +1,6 @@
 import { getActorStatus, runMealDeal } from "../lib/apiClient";
 import {
+  saveCachedPageContext,
   saveLastRequest,
   saveLastResult,
   savePlatformSnapshot,
@@ -7,6 +8,7 @@ import {
 import type {
   ActorStatusResponse,
   MealDealRequest,
+  PageContext,
   PlatformQuote,
   RunMealDealResponse,
 } from "../lib/types";
@@ -14,12 +16,14 @@ import type {
 type RuntimeMessage =
   | { type: "RUN_MEALDEAL"; payload: MealDealRequest }
   | { type: "GET_ACTOR_STATUS"; runId: string }
-  | { type: "SAVE_SNAPSHOT"; snapshot: PlatformQuote };
+  | { type: "SAVE_SNAPSHOT"; snapshot: PlatformQuote }
+  | { type: "SAVE_CONTEXT"; context: PageContext };
 
 type RuntimeResponse =
   | { type: "RUN_MEALDEAL"; data: RunMealDealResponse }
   | { type: "GET_ACTOR_STATUS"; data: ActorStatusResponse }
-  | { type: "SAVE_SNAPSHOT"; ok: true };
+  | { type: "SAVE_SNAPSHOT"; ok: true }
+  | { type: "SAVE_CONTEXT"; ok: true };
 
 chrome.runtime.onMessage.addListener(
   (message: RuntimeMessage, _sender, sendResponse) => {
@@ -54,6 +58,10 @@ async function handle(message: RuntimeMessage): Promise<RuntimeResponse> {
     case "SAVE_SNAPSHOT": {
       await savePlatformSnapshot(message.snapshot);
       return { type: "SAVE_SNAPSHOT", ok: true };
+    }
+    case "SAVE_CONTEXT": {
+      await saveCachedPageContext(message.context);
+      return { type: "SAVE_CONTEXT", ok: true };
     }
   }
 }

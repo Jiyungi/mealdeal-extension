@@ -38,13 +38,14 @@ await new Promise((r) => server.listen(4173, r));
 
 const browser = await chromium.launch();
 const context = await browser.newContext({
-  viewport: { width: 1380, height: 980 },
+  viewport: { width: 1800, height: 980 },
   deviceScaleFactor: 2,
 });
 const page = await context.newPage();
 await page.goto("http://localhost:4173/index.html", { waitUntil: "load" });
 // wait for React trees to mount
 await page.waitForSelector("#frame-detected .detected-cart");
+await page.waitForSelector("#frame-detected-no-address .detected-cart");
 await page.waitForSelector("#frame-running .loading-state");
 await page.waitForSelector("#frame-result .result-card");
 await page.waitForTimeout(250);
@@ -57,6 +58,7 @@ await page.screenshot({
 
 for (const [id, name] of [
   ["frame-detected", "detected"],
+  ["frame-detected-no-address", "detected-no-address"],
   ["frame-running", "running"],
   ["frame-result", "result"],
 ]) {

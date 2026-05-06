@@ -29,7 +29,13 @@ import type { PlatformRunStatus } from "./components/PlatformStatusCard";
 
 type Detection =
   | { status: "pending" }
-  | { status: "ok"; context: PageContext }
+  | { status: "ok"; context: PageContext; source: "live" }
+  | {
+      status: "ok";
+      context: PageContext;
+      source: "cache";
+      updatedAt: number;
+    }
   | { status: "unsupported" }
   | { status: "error"; message: string };
 
@@ -68,7 +74,7 @@ export default function App() {
       setSnapshots(snaps);
 
       if (detected.status === "ok") {
-        setDetection({ status: "ok", context: detected.context });
+        setDetection(detected);
         setPhase({ kind: "detected" });
         return;
       }
@@ -168,13 +174,13 @@ export default function App() {
   );
 
   const handleCompareDetected = useCallback(
-    async (otherPlatforms: Platform[]) => {
+    async (otherPlatforms: Platform[], overrideAddress?: string) => {
       if (detection.status !== "ok") return;
       const ctx = detection.context;
       const query =
         ctx.cartItems[0]?.name ?? ctx.restaurantName ?? "";
       const req: MealDealRequest = {
-        address: ctx.address ?? "",
+        address: overrideAddress ?? ctx.address ?? "",
         restaurantName: ctx.restaurantName ?? undefined,
         query,
         cartItems: ctx.cartItems,
@@ -228,6 +234,10 @@ export default function App() {
       {phase.kind === "detected" && detection.status === "ok" ? (
         <DetectedCart
           context={detection.context}
+          source={detection.source}
+          updatedAt={
+            detection.source === "cache" ? detection.updatedAt : undefined
+          }
           submitting={false}
           onCompare={handleCompareDetected}
           onEditManually={handleEditManually}
