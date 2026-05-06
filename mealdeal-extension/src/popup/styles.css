@@ -418,10 +418,29 @@ body {
 .quote-table__header,
 .quote-table__row {
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr 0.8fr 0.9fr 0.7fr 0.5fr;
+  /* 6 cols: platform | subtotal | fees | total | eta | action */
+  grid-template-columns: 1.4fr 0.9fr 0.8fr 0.9fr 0.7fr 0.5fr;
   gap: 8px;
   padding: 8px 10px;
   align-items: center;
+}
+
+/* Drop the fees column when no quote has fee data. */
+.quote-table__header.quote-table__row--no-fees,
+.quote-table__row--no-fees {
+  grid-template-columns: 1.4fr 1.0fr 0.9fr 0.7fr 0.5fr;
+}
+
+/* Drop the total column when no quote has a visible final total. */
+.quote-table__header.quote-table__row--no-total,
+.quote-table__row--no-total {
+  grid-template-columns: 1.4fr 1.0fr 0.9fr 0.7fr 0.5fr;
+}
+
+/* Drop both when neither fees nor totals are available. */
+.quote-table__header.quote-table__row--no-total.quote-table__row--no-fees,
+.quote-table__row--no-total.quote-table__row--no-fees {
+  grid-template-columns: 1.6fr 1.0fr 0.9fr 0.5fr;
 }
 
 .quote-table__header {
@@ -447,9 +466,14 @@ body {
   opacity: 0.55;
 }
 
-.quote-table__total {
+.quote-table__subtotal {
   font-weight: 700;
   color: var(--accent-strong);
+}
+
+.quote-table__total {
+  font-weight: 600;
+  color: var(--text);
 }
 
 .quote-table__warning {

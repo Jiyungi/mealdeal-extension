@@ -1,5 +1,5 @@
 // Shared type contract with the MealDeal Apify Actor and the Chrome extension.
-// Keep in sync with mealdeal-actor/src/types.ts and
+// Keep in sync with apify_actor/src/types.ts and
 // mealdeal-extension/src/lib/types.ts.
 
 export const PLATFORMS = ["ubereats", "doordash", "grubhub"] as const;
@@ -17,6 +17,7 @@ export type MealDealRequest = {
   query: string;
   cartItems: CartItemRequest[];
   platforms: Platform[];
+  doorDashStoreUrls?: string[];
   userVisibleSnapshots?: PlatformQuote[];
 };
 

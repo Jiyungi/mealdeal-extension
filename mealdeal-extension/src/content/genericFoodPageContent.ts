@@ -67,17 +67,30 @@ export function textOf(el: Element | null | undefined): string | null {
   return t && t.length > 0 ? t : null;
 }
 
+/**
+ * Find the smallest element whose text matches a label pattern. The old
+ * version walked `li, tr, div, p, span` and returned the FIRST match,
+ * which on a giant `<div>` wrapping the whole cart meant extractVisibleMoney
+ * would happily grab the first `$..` in the entire cart pane (usually the
+ * tax) when we asked for "subtotal". Preferring the smallest matching
+ * node scopes the money lookup to the actual "Subtotal $12.59" row.
+ */
 export function findByLabel(labelPatterns: RegExp[]): HTMLElement | null {
   const nodes = Array.from(
     document.querySelectorAll<HTMLElement>("li, tr, div, p, span"),
   );
+  let best: HTMLElement | null = null;
+  let bestLen = Infinity;
   for (const node of nodes) {
     const text = node.textContent ?? "";
-    if (labelPatterns.some((re) => re.test(text))) {
-      return node;
+    if (!labelPatterns.some((re) => re.test(text))) continue;
+    const len = text.length;
+    if (len > 0 && len < bestLen) {
+      best = node;
+      bestLen = len;
     }
   }
-  return null;
+  return best;
 }
 
 export function emptySnapshot(platform: Platform): PlatformQuote {
@@ -228,28 +241,62 @@ export function collectCartRows(rowSelectors: string[]): RawCartRow[] {
     );
     const price = priceEl ? textOf(priceEl) : null;
     const quantity =
-      extractQuantityFromText(textOf(el)) ??
-      (Number(
-        el.querySelector<HTMLInputElement>("input[type=number]")?.value,
-      ) ||
-        null);
+      numberInputQuantity(el) ??
+      ariaQuantity(el) ??
+      extractQuantityFromText(textOf(el));
     if (name) rows.push({ name, quantity, price });
   }
   return rows;
 }
 
+/**
+ * Read the quantity from an explicit <input type="number"> in the cart
+ * row. Uber Eats, DoorDash, and Grubhub all render the cart quantity as
+ * a real form control, which is far more reliable than text heuristics.
+ */
+function numberInputQuantity(el: Element): number | null {
+  const input = el.querySelector<HTMLInputElement>("input[type=number]");
+  if (!input) return null;
+  const n = Number(input.value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * Some platforms render the quantity stepper as buttons with aria-labels
+ * like "Quantity 2" rather than an input.
+ */
+function ariaQuantity(el: Element): number | null {
+  const nodes = Array.from(
+    el.querySelectorAll<HTMLElement>("[aria-label], [aria-valuenow]"),
+  );
+  for (const node of nodes) {
+    const valueNow = node.getAttribute("aria-valuenow");
+    if (valueNow) {
+      const n = Number(valueNow);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    const label = node.getAttribute("aria-label") ?? "";
+    const m = label.match(/\bquantity[^\d]*(\d{1,2})\b/i);
+    if (m) {
+      const n = Number(m[1]);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+  }
+  return null;
+}
+
 export function toCartItems(rows: RawCartRow[]): CartItemRequest[] {
+  // Do NOT sum duplicates across rows. The cart drawer is the single source
+  // of truth; if the same name appears more than once (e.g. because the
+  // page also renders it as a "featured item"), keep the first occurrence.
+  // Summing caused bogus 2× / 3× / 4× quantities on Uber Eats.
   const seen = new Map<string, CartItemRequest>();
   for (const row of rows) {
     if (!row.name) continue;
     const key = row.name.toLowerCase();
-    const existing = seen.get(key);
+    if (seen.has(key)) continue;
     const qty = row.quantity ?? 1;
-    if (existing) {
-      existing.quantity += qty;
-    } else {
-      seen.set(key, { name: row.name, quantity: qty });
-    }
+    seen.set(key, { name: row.name, quantity: qty });
   }
   return Array.from(seen.values());
 }

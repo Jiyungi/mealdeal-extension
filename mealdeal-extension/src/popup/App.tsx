@@ -138,12 +138,20 @@ export default function App() {
 
   const runWith = useCallback(
     async (req: MealDealRequest) => {
+      const allSnapshots =
+        detection.status === "ok"
+          ? [detection.context.snapshot, ...snapshots]
+          : snapshots;
+      const doorDashStoreUrls = collectDoorDashStoreUrls(
+        detection.status === "ok" ? detection.context : null,
+        allSnapshots,
+      );
       const withSnapshots: MealDealRequest = {
         ...req,
-        userVisibleSnapshots:
-          detection.status === "ok"
-            ? [detection.context.snapshot, ...snapshots]
-            : snapshots,
+        userVisibleSnapshots: allSnapshots,
+        doorDashStoreUrls: doorDashStoreUrls.length > 0
+          ? doorDashStoreUrls
+          : undefined,
       };
       await saveLastRequest(req);
       setInitialValues(req);
@@ -289,4 +297,40 @@ export default function App() {
       ) : null}
     </div>
   );
+}
+
+// Pull any DoorDash /store/ URLs we've seen — either the active tab (if the
+// user is browsing DoorDash right now) or an earlier cached snapshot from a
+// previous DoorDash visit. Person B's Actor can hand these to its Apify
+// Store fallback instead of trying the browser path that DoorDash blocks.
+function collectDoorDashStoreUrls(
+  context: PageContext | null,
+  snapshots: PlatformQuote[],
+): string[] {
+  const urls = new Set<string>();
+  const accept = (raw: string | null | undefined) => {
+    if (!raw) return;
+    try {
+      const u = new URL(raw);
+      if (
+        u.hostname.includes("doordash.com") &&
+        u.pathname.includes("/store/")
+      ) {
+        urls.add(u.toString());
+      }
+    } catch {
+      /* ignore */
+    }
+  };
+  if (context?.platform === "doordash") {
+    accept(context.restaurantUrl);
+    accept(context.url);
+  }
+  for (const snap of snapshots) {
+    if (snap.platform === "doordash") {
+      accept(snap.restaurantUrl);
+      accept(snap.checkoutUrl);
+    }
+  }
+  return Array.from(urls);
 }

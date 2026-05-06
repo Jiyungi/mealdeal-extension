@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { PageContext, Platform } from "../../lib/types";
 import { platformLabel } from "../../lib/platformLinks";
 import { formatUSD } from "../../lib/formatMoney";
+import { sanitizeRestaurantName } from "../../lib/cleanText";
 import { loadHomeAddress, saveHomeAddress } from "../../lib/storage";
 
 type Props = {
@@ -97,7 +98,7 @@ export default function DetectedCart({
       </div>
 
       <div className="detected-cart__restaurant">
-        {context.restaurantName ?? "Unknown restaurant"}
+        {sanitizeRestaurantName(context.restaurantName) ?? "Unknown restaurant"}
       </div>
 
       {editingAddress ? (
@@ -145,13 +146,6 @@ export default function DetectedCart({
           <span className="detected-cart__address-text">
             {effectiveAddress}
           </span>
-          <button
-            type="button"
-            className="btn btn--link detected-cart__address-edit-btn"
-            onClick={startEditing}
-          >
-            Edit
-          </button>
         </div>
       ) : (
         <div className="detected-cart__address detected-cart__address--missing">
@@ -201,10 +195,20 @@ export default function DetectedCart({
         )}
       </ul>
 
-      {context.snapshot.finalTotal != null ? (
+      {context.snapshot.itemSubtotal != null ||
+      context.snapshot.finalTotal != null ? (
         <div className="detected-cart__total">
-          <span>Total on this platform</span>
-          <strong>{formatUSD(context.snapshot.finalTotal)}</strong>
+          <span>
+            {context.snapshot.itemSubtotal != null
+              ? "Cart subtotal on this platform"
+              : "Total on this platform"}
+          </span>
+          <strong>
+            {formatUSD(
+              context.snapshot.itemSubtotal ??
+                context.snapshot.finalTotal,
+            )}
+          </strong>
         </div>
       ) : null}
 

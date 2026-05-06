@@ -63,6 +63,11 @@ export function validateMealDealRequest(raw: unknown): ValidateResult {
       restaurantName,
       cartItems,
       platforms,
+      doorDashStoreUrls: Array.isArray(r.doorDashStoreUrls)
+        ? r.doorDashStoreUrls.filter(
+            (u): u is string => typeof u === "string" && u.trim().length > 0,
+          )
+        : undefined,
       userVisibleSnapshots: Array.isArray(r.userVisibleSnapshots)
         ? (r.userVisibleSnapshots as PlatformQuote[])
         : undefined,

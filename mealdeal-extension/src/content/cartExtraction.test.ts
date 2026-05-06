@@ -54,12 +54,16 @@ describe("collectCartRows + toCartItems", () => {
     expect(rows[1].quantity).toBe(1);
   });
 
-  it("merges duplicate items when converting to CartItemRequest", () => {
+  it("keeps the first occurrence when converting to CartItemRequest", () => {
+    // Delivery sites render the same item in multiple DOM sections
+    // (featured, picked-for-you, cart drawer). The cart drawer is the
+    // source of truth. Summing across sections used to cause bogus
+    // 2×/3× quantities in the popup.
     const rows = collectCartRows(['[data-testid="cart-item"]']);
     const items = toCartItems(rows);
     expect(items).toHaveLength(2);
     const padThai = items.find((i) => i.name === "Chicken Pad Thai");
-    expect(padThai?.quantity).toBe(3); // 2 + 1
+    expect(padThai?.quantity).toBe(2); // first row's quantity, not summed
   });
 
   it("returns an empty array when no rows match", () => {

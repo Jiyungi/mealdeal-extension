@@ -1,4 +1,4 @@
-// Shared type contract with the MealDeal Apify Actor (see mealdeal-actor/src/types.ts).
+// Shared type contract with the MealDeal Apify Actor (see apify_actor/src/types.ts).
 // Keep these in sync with Person B's types verbatim.
 
 export const PLATFORMS = ["ubereats", "doordash", "grubhub"] as const;
@@ -16,6 +16,7 @@ export type MealDealRequest = {
   query: string;
   cartItems: CartItemRequest[];
   platforms: Platform[];
+  doorDashStoreUrls?: string[];
   userVisibleSnapshots?: PlatformQuote[];
 };
 

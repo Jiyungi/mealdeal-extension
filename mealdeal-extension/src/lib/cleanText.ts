@@ -22,6 +22,12 @@ const MONEY_CHUNK = /\$\s?\d+(?:[.,]\d{1,2})?/g;
 // alongside the item name (modifier labels, BOGO tags, promo copy).
 const DESCRIPTION_MARKERS = [
   "Choice of",
+  "Select Size",
+  "Select Protein",
+  "Select Sauce",
+  "Select Toppings",
+  "Select ",
+  "Size:",
   "Add ",
   "With ",
   "Substitutions",
@@ -115,4 +121,43 @@ export function truncateForDisplay(
   const lastSpace = cut.lastIndexOf(" ");
   const head = lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut;
   return head.trimEnd() + "…";
+}
+
+/**
+ * Restaurant-name scrub. Real delivery pages are stateful React trees, and
+ * a broken scraper selector can return literally everything on the page
+ * concatenated into one string (nav items, "Skip to content", the menu,
+ * reviews, schema.org JSON-LD, etc.). None of that is a restaurant name.
+ *
+ * This detects that failure mode and returns null so the UI can hide the
+ * field instead of showing "Skip to contentThree linesLocation marker…".
+ */
+export function sanitizeRestaurantName(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  const text = value.replace(/\s+/g, " ").trim();
+  if (!text) return null;
+
+  // Obviously wrong if there's no space at all after 50+ chars (glued CamelCase garbage)
+  // or if the string is pathologically long.
+  if (text.length > 120) return null;
+  if (text.length > 50 && !text.includes(" ")) return null;
+
+  // Chrome/Uber nav phrases that mean the selector grabbed the whole page.
+  const garbageMarkers = [
+    "Skip to content",
+    "Three lines",
+    "Location marker",
+    "Map location",
+    "Javascript disabled",
+    "View all cities",
+    "Sign up to deliver",
+    '"@context":"https://schema.org"',
+  ];
+  for (const marker of garbageMarkers) {
+    if (text.includes(marker)) return null;
+  }
+
+  return text;
 }

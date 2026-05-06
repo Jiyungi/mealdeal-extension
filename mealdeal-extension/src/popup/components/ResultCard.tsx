@@ -1,94 +1,47 @@
 import type { MealDealResult, PlatformQuote } from "../../lib/types";
-import { formatSavings, formatUSD } from "../../lib/formatMoney";
+import { formatUSD } from "../../lib/formatMoney";
 import { platformLabel, platformOpenUrl } from "../../lib/platformLinks";
 import { truncateForDisplay } from "../../lib/cleanText";
+import { filterUserFacingWarnings } from "../../lib/warnings";
 
 type Props = { result: MealDealResult };
 
-function cheapestBySubtotal(quotes: PlatformQuote[]): PlatformQuote | null {
-  const usable = quotes.filter(
-    (q) => typeof q.itemSubtotal === "number" && q.status !== "failed",
-  );
-  if (usable.length === 0) return null;
-  return usable.reduce((best, q) =>
-    (q.itemSubtotal ?? Infinity) < (best.itemSubtotal ?? Infinity) ? q : best,
-  );
+/**
+ * Which field was the comparison based on for this quote? The Actor prefers
+ * `itemSubtotal` across platforms but falls back to `finalTotal` when it's
+ * the only thing available. We mirror that priority here so the card
+ * headline matches what was actually compared.
+ */
+function headlineFor(quote: PlatformQuote): {
+  value: number | null;
+  label: string;
+} {
+  if (typeof quote.itemSubtotal === "number") {
+    return { value: quote.itemSubtotal, label: "Cart subtotal" };
+  }
+  if (typeof quote.finalTotal === "number") {
+    return { value: quote.finalTotal, label: "Total" };
+  }
+  return { value: null, label: "Cart subtotal" };
 }
 
 export default function ResultCard({ result }: Props) {
-  const { bestPlatform, bestQuote, savingsVsMostExpensive, reason, warnings } =
+  const { bestPlatform, bestQuote, savingsVsSecondBest, reason, warnings } =
     result;
 
-  // Happy path — Actor confidently picked a winner from visible final totals.
-  if (bestPlatform && bestQuote) {
-    return (
-      <div className="result-card">
-        <div className="result-card__eyebrow">Best deal</div>
-        <div className="result-card__title">
-          {platformLabel(bestPlatform)}
-        </div>
-        <div className="result-card__total">
-          {formatUSD(bestQuote.finalTotal)}
-        </div>
-        {savingsVsMostExpensive && savingsVsMostExpensive > 0 ? (
-          <div className="result-card__savings">
-            {formatSavings(savingsVsMostExpensive)}
-          </div>
-        ) : null}
-        <div className="result-card__reason">{reason}</div>
-        <a
-          className="btn btn--primary"
-          href={platformOpenUrl(bestQuote)}
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          Open on {platformLabel(bestPlatform)}
-        </a>
-        {warnings.length > 0 ? (
-          <ul className="result-card__warnings">
-            {warnings.map((w, i) => (
-              <li key={i} title={w}>
-                {truncateForDisplay(w, 160)}
-              </li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-    );
-  }
+  const userWarnings = filterUserFacingWarnings(warnings);
 
-  // Degraded path — no quote exposed a full final total, but we may still
-  // have a partial subtotal-level signal. Show it with an explicit caveat
-  // instead of a blank "no winner" card.
-  const subtotalPick = cheapestBySubtotal(result.quotes);
-
-  if (subtotalPick) {
+  if (!bestPlatform || !bestQuote) {
     return (
-      <div className="result-card result-card--partial">
-        <div className="result-card__eyebrow">Partial result</div>
-        <div className="result-card__title">
-          {platformLabel(subtotalPick.platform)}
-        </div>
-        <div className="result-card__total">
-          {formatUSD(subtotalPick.itemSubtotal)}
-          <span className="result-card__total-note"> subtotal only</span>
-        </div>
+      <div className="result-card result-card--empty">
+        <div className="result-card__title">No comparable quotes</div>
         <div className="result-card__reason">
-          No platform exposed a full visible total (fees and taxes included)
-          for your cart, so we can't compare confidently. Showing the lowest
-          item subtotal instead.
+          {reason ||
+            "We couldn't confidently pick a platform for this order."}
         </div>
-        <a
-          className="btn btn--primary"
-          href={platformOpenUrl(subtotalPick)}
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          Open on {platformLabel(subtotalPick.platform)}
-        </a>
-        {warnings.length > 0 ? (
+        {userWarnings.length > 0 ? (
           <ul className="result-card__warnings">
-            {warnings.map((w, i) => (
+            {userWarnings.map((w, i) => (
               <li key={i} title={w}>
                 {truncateForDisplay(w, 160)}
               </li>
@@ -99,17 +52,33 @@ export default function ResultCard({ result }: Props) {
     );
   }
 
-  // Fully empty fallback.
+  const headline = headlineFor(bestQuote);
+
   return (
-    <div className="result-card result-card--empty">
-      <div className="result-card__title">No comparable quotes</div>
-      <div className="result-card__reason">
-        {reason ||
-          "We couldn't confidently pick a platform for this order."}
+    <div className="result-card">
+      <div className="result-card__eyebrow">Best deal</div>
+      <div className="result-card__title">{platformLabel(bestPlatform)}</div>
+      <div className="result-card__total">
+        {formatUSD(headline.value)}
+        <span className="result-card__total-note"> · {headline.label}</span>
       </div>
-      {warnings.length > 0 ? (
+      {savingsVsSecondBest && savingsVsSecondBest > 0 ? (
+        <div className="result-card__savings">
+          Save {formatUSD(savingsVsSecondBest)} vs the next cheapest
+        </div>
+      ) : null}
+      <div className="result-card__reason">{reason}</div>
+      <a
+        className="btn btn--primary"
+        href={platformOpenUrl(bestQuote)}
+        target="_blank"
+        rel="noreferrer noopener"
+      >
+        Open on {platformLabel(bestPlatform)}
+      </a>
+      {userWarnings.length > 0 ? (
         <ul className="result-card__warnings">
-          {warnings.map((w, i) => (
+          {userWarnings.map((w, i) => (
             <li key={i} title={w}>
               {truncateForDisplay(w, 160)}
             </li>
