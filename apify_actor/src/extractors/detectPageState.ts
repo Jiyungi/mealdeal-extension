@@ -17,7 +17,7 @@ export function detectPageState(text: string, url = ""): VisiblePageState {
         combined
       ),
     loginRequired:
-      /\b(sign in to continue|log in to continue|sign in or sign up|create an account|login-redirect|auth\.uber\.com)\b/i.test(
+      /\b(sign in to continue|log in to continue|please sign in|login-redirect|auth\.uber\.com)\b/i.test(
         combined
       ),
     closedOrPreorder:

@@ -19,6 +19,7 @@ export type MenuItemCandidate = {
   price: number | null;
   rawText: string;
   matchScore: number | null;
+  url?: string | null;
 };
 
 export type PlatformConfig = {

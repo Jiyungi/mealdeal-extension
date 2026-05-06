@@ -1,5 +1,6 @@
 import type { Page } from "playwright";
 import type { PlatformConfig, RestaurantCandidate } from "../platforms/basePlatform.js";
+import { cleanDisplayText } from "../matching/normalizeText.js";
 import { extractEtaFromText } from "./extractEta.js";
 
 export async function extractRestaurantCandidates(
@@ -30,14 +31,15 @@ export async function extractRestaurantCandidates(
       continue;
     }
 
+    const cleanedText = cleanDisplayText(raw.text);
     const url = normalizeCandidateUrl(raw.href, config);
     const looksLikeRestaurant =
-      url != null || /\b(min|delivery|rating|star|\$|mi|closed|open)\b/i.test(raw.text);
-    if (!looksLikeRestaurant || isNavigationText(raw.text)) {
+      url != null || /\b(min|delivery|rating|star|\$|mi|closed|open)\b/i.test(cleanedText);
+    if (!looksLikeRestaurant || isNavigationText(cleanedText)) {
       continue;
     }
 
-    const name = extractRestaurantName(raw.text);
+    const name = extractRestaurantName(cleanedText);
     if (!name || name.length < 2) {
       continue;
     }
@@ -52,10 +54,10 @@ export async function extractRestaurantCandidates(
       platform: config.platform,
       name,
       url,
-      rawText: raw.text,
-      rating: extractRating(raw.text),
-      eta: extractEtaFromText(raw.text),
-      deliveryAvailable: !/\b(closed|unavailable|not available|pickup only)\b/i.test(raw.text),
+      rawText: cleanedText,
+      rating: extractRating(cleanedText),
+      eta: extractEtaFromText(cleanedText),
+      deliveryAvailable: !/\b(closed|unavailable|not available|pickup only)\b/i.test(cleanedText),
       score: null
     });
   }
@@ -75,10 +77,13 @@ function normalizeCandidateUrl(href: string | null, config: PlatformConfig): str
 
 function extractRestaurantName(text: string): string {
   const firstLine = text
-    .split(/(?:\n| {2,}|(?:\d+\s*-\s*\d+\s*min)|(?:\d+\.\d))/i)
+    .split(/\s+•\s+/)
+    .flatMap((part) => part.split(/(?:\n| {2,}|(?:\d+\s*-\s*\d+\s*min)|(?:\d+\.\d))/i))
     .map((part) => part.trim())
     .find((part) => part && !/^\$/.test(part));
-  return (firstLine ?? text).replace(/\s+/g, " ").trim();
+
+  const name = (firstLine ?? text).replace(/\s+/g, " ").trim();
+  return name.replace(/\b([a-z]+)\b\s+\1$/i, "$1").trim();
 }
 
 function extractRating(text: string): number | null {

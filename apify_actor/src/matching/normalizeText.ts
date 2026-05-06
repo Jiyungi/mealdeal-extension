@@ -1,5 +1,14 @@
 const PLATFORM_WORDS = ["ubereats", "uber eats", "doordash", "door dash", "grubhub", "grub hub"];
 const RESTAURANT_FILLER = ["near me", "delivery", "takeout", "pickup", "restaurant", "restaurants", "menu"];
+const DISPLAY_TEXT_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/Â®/g, ""],
+  [/Â™/g, ""],
+  [/Â/g, ""],
+  [/â€¢/g, " • "],
+  [/â€™/g, "'"],
+  [/â€œ|â€/g, '"'],
+  [/â€“|â€”/g, "-"]
+];
 
 const ITEM_ALIASES: Array<[RegExp, string]> = [
   [/\bpad\s*thai\b/g, " padthai "],
@@ -15,7 +24,7 @@ export function normalizeText(value: string | null | undefined): string {
     return "";
   }
 
-  return value
+  return cleanDisplayText(value)
     .toLowerCase()
     .replace(/['']/g, "")
     .replace(/&/g, " and ")
@@ -23,6 +32,31 @@ export function normalizeText(value: string | null | undefined): string {
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function cleanDisplayText(
+  value: string | null | undefined,
+  preserveLineBreaks = false
+): string {
+  if (!value) {
+    return "";
+  }
+
+  let cleaned = value;
+  for (const [pattern, replacement] of DISPLAY_TEXT_REPLACEMENTS) {
+    cleaned = cleaned.replace(pattern, replacement);
+  }
+
+  const spaced = cleaned
+    .replace(/([a-z]{2,}|[A-Za-z]'s)([A-Z])/g, "$1 $2")
+    .replace(/\s*•\s*/g, " • ");
+
+  return preserveLineBreaks
+    ? spaced
+        .replace(/[ \t\f\v]+/g, " ")
+        .replace(/\n{2,}/g, "\n")
+        .trim()
+    : spaced.replace(/\s+/g, " ").trim();
 }
 
 export function normalizeRestaurantText(value: string | null | undefined): string {

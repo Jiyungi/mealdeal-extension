@@ -1,5 +1,6 @@
 import type { Page } from "playwright";
 import type { MenuItemCandidate, PlatformConfig } from "../platforms/basePlatform.js";
+import { cleanDisplayText } from "../matching/normalizeText.js";
 import { parseMoney } from "../utils/parseMoney.js";
 
 export async function extractMenuItems(
@@ -12,29 +13,40 @@ export async function extractMenuItems(
     .evaluateAll((elements) =>
       elements.map((element) => {
         const htmlElement = element as HTMLElement;
+        const anchor =
+          (element.closest("a[href]") as HTMLAnchorElement | null) ??
+          (element.querySelector("a[href]") as HTMLAnchorElement | null);
         const accessibleName =
           htmlElement.getAttribute("aria-label") || htmlElement.getAttribute("title") || "";
         const visibleText = (htmlElement.innerText || htmlElement.textContent || "").trim();
-        return [accessibleName.trim(), visibleText].filter(Boolean).join("\n");
+        return {
+          text: [accessibleName.trim(), visibleText].filter(Boolean).join("\n"),
+          url: anchor?.href || null
+        };
       })
     )
     .catch(() => []);
 
   const bodyFallback = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
-  const candidates = [...rawItems, ...splitPossibleMenuRows(bodyFallback)];
+  const candidates = [
+    ...rawItems,
+    ...splitPossibleMenuRows(bodyFallback).map((text) => ({ text, url: null }))
+  ];
   const seen = new Set<string>();
   const menuItems: MenuItemCandidate[] = [];
 
-  for (const rawText of candidates) {
+  for (const candidate of candidates) {
+    const rawText = candidate.text;
     if (!rawText || rawText.length < 3 || rawText.length > 600) {
       continue;
     }
-    const price = parseMoney(rawText);
-    if (price == null || isNonItemText(rawText)) {
+    const cleanedText = cleanDisplayText(rawText, true);
+    const price = parseMoney(cleanedText);
+    if (price == null || isNonItemText(cleanedText)) {
       continue;
     }
 
-    const name = extractItemName(rawText);
+    const name = extractItemName(cleanedText);
     if (!name || name.length < 2) {
       continue;
     }
@@ -48,8 +60,9 @@ export async function extractMenuItems(
     menuItems.push({
       name,
       price,
-      rawText,
-      matchScore: null
+      rawText: cleanedText,
+      matchScore: null,
+      url: candidate.url
     });
   }
 
@@ -79,14 +92,14 @@ function extractItemName(text: string): string {
     .map((line) => line.trim())
     .find((line) => isLikelyItemNameLine(line));
   if (firstLine) {
-    return firstLine.replace(/\s+/g, " ").trim();
+    return cleanItemName(firstLine);
   }
 
   const beforePrice = text.split(/\$\s*\d/)[0]?.trim() ?? text;
   const firstSentence = beforePrice
     .split(/(?:\d+\s*cal|\bpopular\b|\bcontains\b|\bwith\b.*\$)/i)[0]
     ?.trim();
-  return (firstSentence || beforePrice).replace(/\s+/g, " ").trim();
+  return cleanItemName(firstSentence || beforePrice);
 }
 
 function isNonItemText(text: string): boolean {
@@ -107,4 +120,12 @@ function isLikelyItemNameLine(line: string): boolean {
     return false;
   }
   return /[a-z]/i.test(line);
+}
+
+function cleanItemName(value: string): string {
+  return value
+    .replace(/^#\d+\s+most\s+liked\s+/i, "")
+    .replace(/^(buy\s+\d+,\s*get\s+\d+\s+free)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }

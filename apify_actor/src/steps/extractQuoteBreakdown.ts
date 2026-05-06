@@ -16,9 +16,19 @@ export async function extractQuoteBreakdown(
   const text = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
   const state = detectPageState(text, page.url());
   const fields = parseQuoteFieldsFromText(text);
+  const preliminaryQuoteLevel = inferQuoteLevel(page.url(), text, state);
+  const orderSummaryVisible =
+    state.cartVisible ||
+    state.checkoutVisible ||
+    preliminaryQuoteLevel === "cart" ||
+    preliminaryQuoteLevel === "pre_checkout" ||
+    preliminaryQuoteLevel === "checkout";
+  const hasVisibleSubtotal = fields.itemSubtotal != null && orderSummaryVisible;
+  const menuPriceFallback = deriveMenuItemSubtotalFallback(input, context);
+  const usedMenuPriceFallback = !hasVisibleSubtotal && menuPriceFallback != null && !state.blocked;
   const finalTotal = fields.finalTotal;
   const requestedItem = input.cartItems[0];
-  const itemSubtotal = fields.itemSubtotal;
+  const itemSubtotal = hasVisibleSubtotal ? fields.itemSubtotal : usedMenuPriceFallback ? menuPriceFallback : null;
   const hasVisibleFees =
     fields.deliveryFee != null ||
     fields.serviceFee != null ||
@@ -27,26 +37,39 @@ export async function extractQuoteBreakdown(
 
   if (itemSubtotal == null) {
     warnings.push(`${config.label} visible cart subtotal was not available.`);
+  } else if (usedMenuPriceFallback) {
+    warnings.push(
+      `${config.label} visible cart subtotal was not available, so the Actor used the visible menu price as an item subtotal fallback.`
+    );
   }
   warnings.push(...pageStateWarnings(config.label, state));
   if (
     textMatchesAny(text, config.blockedTexts) &&
     !state.blocked &&
     !state.loginRequired &&
-    !state.cartVisible
+    !state.cartVisible &&
+    !state.checkoutVisible
   ) {
     warnings.push(`${config.label} showed a blocking or login verification page.`);
   }
 
-  const quoteLevel = inferQuoteLevel(page.url(), text, state);
+  const quoteLevel = preliminaryQuoteLevel;
   const status: PlatformQuote["status"] =
-    itemSubtotal != null || finalTotal != null ? "success" : hasVisibleFees ? "partial" : "failed";
+    hasVisibleSubtotal || finalTotal != null ? "success" : itemSubtotal != null || hasVisibleFees ? "partial" : "failed";
   const confidence: PlatformQuote["confidence"] =
-    itemSubtotal != null && quoteLevel === "cart"
+    hasVisibleSubtotal && (quoteLevel === "cart" || quoteLevel === "pre_checkout" || quoteLevel === "checkout")
       ? "high"
       : itemSubtotal != null || finalTotal != null || hasVisibleFees
         ? "medium"
         : "low";
+  const filteredWarnings = filterResolvedWarnings(warnings, {
+    label: config.label,
+    itemSubtotal,
+    orderSummaryVisible,
+    hasSelectedRequiredOptionsWarning: warnings.some((warning) =>
+      warning.includes("showed required item modifiers, so the Actor selected")
+    )
+  });
 
   return {
     platform: config.platform,
@@ -68,7 +91,7 @@ export async function extractQuoteBreakdown(
     checkoutUrl: page.url(),
     quoteLevel,
     confidence,
-    warnings: Array.from(new Set(warnings)),
+    warnings: Array.from(new Set(filteredWarnings)),
     rawEvidence: fields.rawEvidence
   };
 }
@@ -91,10 +114,16 @@ function inferQuoteLevel(
   ) {
     return "checkout";
   }
+  if (/\bmod=quickview\b/i.test(url) || /\bmenu-item\b/i.test(url)) {
+    return "menu";
+  }
   if (state.cartVisible || /\b(cart|bag|basket|your order)\b/.test(combined)) {
     return "cart";
   }
-  if (/\b(pre[-\s]?checkout|review order|order summary|estimated total|order total)\b/.test(combined)) {
+  if (
+    state.checkoutVisible ||
+    /\b(go to checkout|pre[-\s]?checkout|review order|order summary|estimated total|order total)\b/.test(combined)
+  ) {
     return "pre_checkout";
   }
   if (/\bmenu\b/.test(combined)) {
@@ -106,4 +135,47 @@ function inferQuoteLevel(
 function textMatchesAny(text: string, patterns: string[]): boolean {
   const normalized = text.toLowerCase();
   return patterns.some((pattern) => normalized.includes(pattern.toLowerCase()));
+}
+
+export function deriveMenuItemSubtotalFallback(
+  input: ActorInput,
+  context: PlatformQuoteContext
+): number | null {
+  const price = context.menuItem?.price;
+  const quantity = input.cartItems[0]?.quantity ?? 1;
+  if (price == null) {
+    return null;
+  }
+
+  return Number((price * quantity).toFixed(2));
+}
+
+function filterResolvedWarnings(
+  warnings: string[],
+  context: {
+    label: string;
+    itemSubtotal: number | null;
+    orderSummaryVisible: boolean;
+    hasSelectedRequiredOptionsWarning: boolean;
+  }
+): string[] {
+  return warnings.filter((warning) => {
+    if (
+      context.itemSubtotal != null &&
+      context.orderSummaryVisible &&
+      (warning.includes("Could not find a safe add-to-cart button") ||
+        warning.includes(`${context.label} cart button was not visible.`))
+    ) {
+      return false;
+    }
+
+    if (
+      context.hasSelectedRequiredOptionsWarning &&
+      warning === `${context.label} may require item modifiers before the quote is complete.`
+    ) {
+      return false;
+    }
+
+    return true;
+  });
 }

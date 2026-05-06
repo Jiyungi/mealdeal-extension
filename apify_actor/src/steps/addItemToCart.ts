@@ -64,7 +64,7 @@ async function addOneItemToCart(
     await page.waitForTimeout(500);
   }
 
-  const openedItem = await safeClickByText(page, [item.name]);
+  const openedItem = await openMenuItem(page, item);
   if (!openedItem) {
     warnings.push(`Could not click the visible menu item "${item.name}" on ${config.label}.`);
   }
@@ -218,6 +218,7 @@ async function clickFirstRequiredModifierAction(page: Page): Promise<RequiredMod
         if (/^(required|choose|choice|delivery|pickup|group order|log in|sign up)$/i.test(text)) continue;
         if (/make\\s+required\\s+choice|special instructions|add any requests|quantity/i.test(text)) continue;
         if (/\\b(select|choose)\\b.*\\b(optional|required)\\b/i.test(text)) continue;
+        if (/\\badd\\s+\\d*\\s*to\\s+(?:order|cart|bag)\\b/i.test(text)) continue;
         if (/\\b(add-ons?|special instructions|top off|sauce|choice of|add a side)\\b/i.test(text)) continue;
         if (/\\b(arrow|chevron|caret|expand|collapse)\\b/i.test(text)) continue;
         candidates.push({ element, rect, text, action: isActionElement(element) ? 0 : 1 });
@@ -293,6 +294,21 @@ async function clickFirstRequiredModifierAction(page: Page): Promise<RequiredMod
     () => false
   );
   return clicked ? option : null;
+}
+
+async function openMenuItem(page: Page, item: MenuItemCandidate): Promise<boolean> {
+  if (item.url) {
+    const navigated = await page
+      .goto(item.url, { waitUntil: "domcontentloaded" })
+      .then(() => true)
+      .catch(() => false);
+    if (navigated) {
+      await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => undefined);
+      return true;
+    }
+  }
+
+  return safeClickByText(page, [item.name]);
 }
 
 async function scrollItemModal(page: Page): Promise<void> {

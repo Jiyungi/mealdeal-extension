@@ -37,5 +37,5 @@ async function hasVisibleCart(page: Page): Promise<boolean> {
 async function hasVisibleCartSubtotal(page: Page): Promise<boolean> {
   const text = await page.locator("body").innerText({ timeout: 2500 }).catch(() => "");
   const state = detectPageState(text, page.url());
-  return state.cartVisible && parseQuoteFieldsFromText(text).itemSubtotal != null;
+  return (state.cartVisible || state.checkoutVisible) && parseQuoteFieldsFromText(text).itemSubtotal != null;
 }

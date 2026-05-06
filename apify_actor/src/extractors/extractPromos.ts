@@ -9,6 +9,12 @@ export function extractPromoTextFromText(text: string): string | null {
       if (/\bcontact[-\s]?free\b/i.test(line)) {
         return false;
       }
+      if (/^(?:q\)|how do i get|how can i order|does .+ offer delivery|what is the .+ address)/i.test(line)) {
+        return false;
+      }
+      if (/\?$/.test(line)) {
+        return false;
+      }
 
       return (
         /\b(save|promo|promotion|discount|coupon|offer valid|qualifying orders?|promo code)\b/i.test(line) ||

@@ -82,6 +82,7 @@ describe("quote extractors", () => {
         <div>$10 off</div>
         <p>Your choice of protein served on rice and topped off with sauce.</p>
         <p>Q) Does Halal City offer contact-free delivery?</p>
+        <p>How do I get free delivery on my Halal City order?</p>
       </section>
     `);
 
