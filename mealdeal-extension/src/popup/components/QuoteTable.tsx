@@ -12,29 +12,16 @@ type Props = {
 export default function QuoteTable({ quotes, bestPlatform }: Props) {
   if (quotes.length === 0) return null;
 
-  // "Cart subtotal" is the primary axis, but fall back to finalTotal when
-  // the Actor only captured the checkout total for a platform — otherwise
-  // the row shows "—" even though we do have a price.
+  // The actor compares platforms only on cart subtotal.
+  // Keep the primary column aligned with that basis.
   const primaryValue = (q: PlatformQuote): number | null =>
-    typeof q.itemSubtotal === "number"
-      ? q.itemSubtotal
-      : typeof q.finalTotal === "number"
-        ? q.finalTotal
-        : null;
+    typeof q.itemSubtotal === "number" ? q.itemSubtotal : null;
 
   // Show the Fees column only when at least one quote has fee data.
   const anyFees = quotes.some((q) => sumFees(q) !== null);
 
-  // Show the Total column only when:
-  //  - at least one quote has a finalTotal, AND
-  //  - at least one quote shows a different subtotal vs finalTotal
-  // Otherwise finalTotal is already being shown in the primary column.
-  const anyDistinctTotal = quotes.some(
-    (q) =>
-      typeof q.finalTotal === "number" &&
-      typeof q.itemSubtotal === "number" &&
-      q.finalTotal !== q.itemSubtotal,
-  );
+  // Show the Total column only when at least one quote has a visible final total.
+  const anyDistinctTotal = quotes.some((q) => typeof q.finalTotal === "number");
 
   return (
     <div className="quote-table">

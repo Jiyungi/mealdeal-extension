@@ -7,22 +7,17 @@ import { filterUserFacingWarnings } from "../../lib/warnings";
 type Props = { result: MealDealResult };
 
 /**
- * Which field was the comparison based on for this quote? The Actor prefers
- * `itemSubtotal` across platforms but falls back to `finalTotal` when it's
- * the only thing available. We mirror that priority here so the card
- * headline matches what was actually compared.
+ * The actor compares platforms on cart subtotal only.
+ * Keep the headline aligned with that basis.
  */
 function headlineFor(quote: PlatformQuote): {
   value: number | null;
   label: string;
 } {
-  if (typeof quote.itemSubtotal === "number") {
-    return { value: quote.itemSubtotal, label: "Cart subtotal" };
-  }
-  if (typeof quote.finalTotal === "number") {
-    return { value: quote.finalTotal, label: "Total" };
-  }
-  return { value: null, label: "Cart subtotal" };
+  return {
+    value: typeof quote.itemSubtotal === "number" ? quote.itemSubtotal : null,
+    label: "Cart subtotal",
+  };
 }
 
 export default function ResultCard({ result }: Props) {
