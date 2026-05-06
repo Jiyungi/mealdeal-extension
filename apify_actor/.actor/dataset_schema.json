@@ -1,0 +1,142 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "input": {
+        "type": "object",
+        "title": "Input request",
+        "description": "The normalized MealDeal request used for this run."
+      },
+      "bestPlatform": {
+        "type": ["string", "null"],
+        "title": "Best platform",
+        "description": "Platform with the lowest visible cart subtotal, or null if no platform returned a comparable subtotal.",
+        "enum": ["ubereats", "doordash", "grubhub", null]
+      },
+      "bestQuote": {
+        "type": ["object", "null"],
+        "title": "Best quote",
+        "description": "The quote selected as best, or null when no cart subtotal was visible."
+      },
+      "quotes": {
+        "type": "array",
+        "title": "Platform quotes",
+        "description": "Normalized quote result for each selected platform.",
+        "items": {
+          "type": "object"
+        }
+      },
+      "savingsVsMostExpensive": {
+        "type": ["number", "null"],
+        "title": "Savings vs most expensive",
+        "description": "Dollar savings of the best quote compared with the most expensive comparable quote."
+      },
+      "savingsVsSecondBest": {
+        "type": ["number", "null"],
+        "title": "Savings vs second best",
+        "description": "Dollar savings of the best quote compared with the second best comparable quote."
+      },
+      "reason": {
+        "type": "string",
+        "title": "Reason",
+        "description": "Human-readable explanation for the chosen result."
+      },
+      "warnings": {
+        "type": "array",
+        "title": "Warnings",
+        "description": "Aggregated warnings across all platform quote flows.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "createdAt": {
+        "type": "string",
+        "title": "Created at",
+        "description": "ISO timestamp when the MealDealResult was created."
+      }
+    },
+    "required": ["input", "bestPlatform", "bestQuote", "quotes", "reason", "warnings", "createdAt"]
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": [
+          "createdAt",
+          "input.address",
+          "input.restaurantName",
+          "input.query",
+          "input.platforms",
+          "bestPlatform",
+          "bestQuote.itemSubtotal",
+          "bestQuote.restaurantName",
+          "bestQuote.eta",
+          "savingsVsMostExpensive",
+          "savingsVsSecondBest",
+          "reason",
+          "warnings"
+        ],
+        "flatten": ["input", "bestQuote"]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "createdAt": {
+            "label": "Created",
+            "format": "date"
+          },
+          "input.address": {
+            "label": "Address",
+            "format": "text"
+          },
+          "input.restaurantName": {
+            "label": "Restaurant",
+            "format": "text"
+          },
+          "input.query": {
+            "label": "Query",
+            "format": "text"
+          },
+          "input.platforms": {
+            "label": "Platforms",
+            "format": "array"
+          },
+          "bestPlatform": {
+            "label": "Best platform",
+            "format": "text"
+          },
+          "bestQuote.itemSubtotal": {
+            "label": "Best cart subtotal",
+            "format": "number"
+          },
+          "bestQuote.restaurantName": {
+            "label": "Matched restaurant",
+            "format": "text"
+          },
+          "bestQuote.eta": {
+            "label": "ETA",
+            "format": "text"
+          },
+          "savingsVsMostExpensive": {
+            "label": "Savings vs max",
+            "format": "number"
+          },
+          "savingsVsSecondBest": {
+            "label": "Savings vs second",
+            "format": "number"
+          },
+          "reason": {
+            "label": "Reason",
+            "format": "text"
+          },
+          "warnings": {
+            "label": "Warnings",
+            "format": "array"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,18 +1,88 @@
-# apify_actor (intentionally empty)
+# MealDeal Actor
 
-Person B owns the Apify Actor that scrapes Uber Eats, DoorDash, and Grubhub
-quote data. Their source code lives in their own repo and is deployed to
-Apify; it is **not** vendored here.
+Custom Apify Actor for the Person B MealDeal workstream. It opens food-delivery platforms with Crawlee and Playwright, tries to build the requested cart, extracts visible cart subtotals, and returns one normalized `MealDealResult`.
 
-The MealDeal extension and `mealdeal-api` bridge use the contract defined
-in `mealdeal-extension/src/lib/types.ts` (and the mirror in
-`mealdeal-api/lib/types.ts`), which matches Person B's `MealDealResult`
-shape. As long as the Actor conforms to that shape, nothing in this
-directory is required.
+## Validate The Scraper
 
-To point the API at the deployed Actor, set in `mealdeal-api/.env`:
+Run the normal code checks:
 
+```powershell
+npm run typecheck
+npm test
+npm run build
+docker build -t mealdeal-actor .
 ```
-APIFY_TOKEN=<your Apify personal API token>
-APIFY_ACTOR_ID=<username>~<actor-name>
+
+Run the deterministic scraper test:
+
+```powershell
+npm run test:scraper
 ```
+
+`test:scraper` points the real Actor platform flows at fixture pages in `fixtures/`. This proves the scraper can extract restaurant names, matching menu items, subtotal, delivery fee, service fee, small order fee, tax, discount, promo text, ETA, choose the cheapest platform by visible cart subtotal, and return normalized quotes.
+
+## Live-Site Smoke Test
+
+Live delivery sites may block headless browsers, require login, show CAPTCHA, or hide checkout totals. Those are expected live-site outcomes; the Actor stops at the cart and compares visible cart subtotals instead of trying to checkout or inventing prices.
+
+For normal Docker testing, keep `debug=false` to avoid large screenshot writes on Windows bind mounts.
+
+## Apify Deployment
+
+This Actor is configured as `mealdeal-scraper` in `.actor/actor.json`.
+
+In **Windows PowerShell**, from this Actor folder:
+
+```powershell
+cd "C:\Users\Mr. Paul\Downloads\MealDeal Actor"
+apify validate-schema
+apify push
+```
+
+The Actor input supports Apify Proxy through `proxyConfiguration`. Leave `useApifyProxy` disabled for the first smoke test, then enable it in Apify Console if a platform blocks cloud traffic.
+
+DoorDash and Uber Eats may still require a real user-visible browser session for some cart data. The supported production path is for the extension/backend to pass `userVisibleSnapshots` captured from the user's already logged-in tab. When a snapshot is supplied for a selected platform, the Actor compares that quote and skips live scraping for that platform.
+
+## DoorDash Verification
+
+Do not try to bypass DoorDash human verification. The supported local path is to use your own browser session after you manually complete verification or sign in.
+
+In **Windows PowerShell**, from this Actor folder:
+
+```powershell
+cd "C:\Users\Mr. Paul\Downloads\MealDeal Actor"
+npm run session:doordash
+```
+
+Chrome opens. In **Chrome**, complete DoorDash verification and sign in if needed. When DoorDash is usable, go back to **PowerShell** and press Enter. This saves cookies in `profiles\doordash`, which is ignored by Git.
+
+Then run a local DoorDash smoke test in **PowerShell**:
+
+```powershell
+cd "C:\Users\Mr. Paul\Downloads\MealDeal Actor"
+
+$storage = "storage-doordash-profile"
+Remove-Item -Recurse -Force $storage -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path "$storage\key_value_stores\default" | Out-Null
+
+@{
+  address="525 Market St, San Francisco, CA"
+  restaurantName="McDonald's"
+  query="Big Mac"
+  cartItems=@(@{ name="Big Mac"; quantity=1 })
+  platforms=@("doordash")
+  maxCandidatesPerPlatform=3
+  debug=$true
+  platformBrowserUserDataDirs=@{ doordash=(Resolve-Path "profiles\doordash").Path }
+} | ConvertTo-Json -Depth 6 | Set-Content -Encoding UTF8 "$storage\key_value_stores\default\INPUT.json"
+
+$env:APIFY_LOCAL_STORAGE_DIR = (Resolve-Path $storage).Path
+$env:CRAWLEE_STORAGE_DIR = (Resolve-Path $storage).Path
+npm run dev
+Remove-Item Env:\APIFY_LOCAL_STORAGE_DIR -ErrorAction SilentlyContinue
+Remove-Item Env:\CRAWLEE_STORAGE_DIR -ErrorAction SilentlyContinue
+
+Get-Content "$storage\datasets\default\000000001.json"
+```
+
+Use `npm run dev` for this profile test. Docker runs Linux Chrome under Xvfb, so it cannot use an interactive Windows Chrome session reliably.

@@ -1,0 +1,14 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "MealDeal Scraper output",
+  "description": "The Actor writes one normalized MealDealResult item to the default dataset.",
+  "type": "object",
+  "properties": {
+    "results": {
+      "type": "string",
+      "title": "MealDeal results",
+      "description": "Default dataset containing one MealDealResult item with the input, platform quotes, best quote, savings, warnings, and timestamp.",
+      "template": "{{links.apiDefaultDatasetUrl}}/items"
+    }
+  }
+}

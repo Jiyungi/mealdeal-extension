@@ -1,0 +1,17 @@
+{
+  "actorSpecification": 1,
+  "name": "mealdeal-scraper",
+  "title": "MealDeal Scraper",
+  "description": "Scrapes visible food delivery cart subtotals across Uber Eats, DoorDash, and Grubhub.",
+  "version": "0.2",
+  "buildTag": "latest",
+  "minMemoryMbytes": 2048,
+  "defaultMemoryMbytes": 4096,
+  "maxMemoryMbytes": 8192,
+  "dockerfile": "../Dockerfile",
+  "input": "./input_schema.json",
+  "output": "./output_schema.json",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}

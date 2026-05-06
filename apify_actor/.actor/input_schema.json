@@ -1,0 +1,109 @@
+{
+  "title": "MealDeal Cart Subtotal Scraper Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "address": {
+      "title": "Delivery address",
+      "type": "string",
+      "description": "Full delivery address used across all platforms.",
+      "editor": "textfield"
+    },
+    "restaurantName": {
+      "title": "Restaurant name",
+      "type": "string",
+      "description": "Optional target restaurant name.",
+      "editor": "textfield"
+    },
+    "query": {
+      "title": "Food query",
+      "type": "string",
+      "description": "Food or cuisine query, such as Chicken Pad Thai or sushi.",
+      "editor": "textfield"
+    },
+    "cartItems": {
+      "title": "Cart items",
+      "type": "array",
+      "description": "Items the Actor should try to add to cart.",
+      "editor": "json",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Item name",
+            "type": "string",
+            "description": "Requested menu item name.",
+            "editor": "textfield"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer",
+            "description": "Requested item quantity.",
+            "default": 1,
+            "editor": "number"
+          }
+        },
+        "required": ["name"]
+      }
+    },
+    "platforms": {
+      "title": "Platforms",
+      "type": "array",
+      "description": "Selected delivery platforms to scrape or compare from user-visible snapshots.",
+      "editor": "json",
+      "items": {
+        "type": "string"
+      },
+      "default": ["ubereats", "doordash", "grubhub"]
+    },
+    "userVisibleSnapshots": {
+      "title": "User-visible quote snapshots",
+      "type": "array",
+      "description": "Optional normalized cart snapshots captured from a user's logged-in browser tab by the extension. When provided for a selected platform, the Actor compares this quote and skips live scraping for that platform.",
+      "editor": "json",
+      "items": {
+        "type": "object"
+      }
+    },
+    "maxCandidatesPerPlatform": {
+      "title": "Max candidates per platform",
+      "type": "integer",
+      "description": "Maximum restaurant candidates to evaluate per platform.",
+      "default": 3,
+      "editor": "number"
+    },
+    "debug": {
+      "title": "Debug mode",
+      "type": "boolean",
+      "description": "When enabled, saves debug screenshots to the run key-value store.",
+      "default": false,
+      "editor": "checkbox"
+    },
+    "proxyConfiguration": {
+      "title": "Proxy configuration",
+      "type": "object",
+      "description": "Optional Apify Proxy or custom proxy configuration for live scraping.",
+      "default": { "useApifyProxy": false },
+      "editor": "proxy"
+    },
+    "platformProxyConfigurations": {
+      "title": "Platform proxy configurations",
+      "type": "object",
+      "description": "Optional advanced per-platform proxy configurations keyed by ubereats, doordash, or grubhub.",
+      "editor": "json"
+    },
+    "proxyUrl": {
+      "title": "Custom proxy URL",
+      "type": "string",
+      "description": "Optional advanced custom proxy URL used for all live scraping. Prefer Proxy configuration on Apify.",
+      "editor": "textfield"
+    },
+    "platformProxyUrls": {
+      "title": "Platform custom proxy URLs",
+      "type": "object",
+      "description": "Optional advanced per-platform custom proxy URLs keyed by ubereats, doordash, or grubhub.",
+      "editor": "json"
+    }
+  },
+  "required": ["address", "query", "cartItems", "platforms"]
+}

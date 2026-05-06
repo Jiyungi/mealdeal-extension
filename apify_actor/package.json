@@ -1,0 +1,31 @@
+{
+  "name": "mealdeal-actor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Custom Apify Actor that compares visible MealDeal quotes across Uber Eats, DoorDash, and Grubhub.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/main.ts",
+    "start": "node dist/main.js",
+    "session:doordash": "tsx src/tools/openDoorDashSession.ts",
+    "test": "vitest run --exclude test/actorFixture.e2e.test.ts",
+    "test:scraper": "vitest run test/actorFixture.e2e.test.ts --testTimeout=120000",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "apify": "3.7.1",
+    "crawlee": "3.16.0",
+    "playwright": "1.59.1"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "tsx": "4.21.0",
+    "typescript": "6.0.3",
+    "vitest": "4.1.5"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
